@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def get_embedding(text: str):
-
     response = requests.post(getenv("EMBEDDER_URL"), json={"text": text})
 
     if response.status_code == 200:
