@@ -7,7 +7,7 @@ from langchain.agents import create_agent
 
 from loguru import logger
 
-from agents.utils.llm import llm
+from src.app.infra.llm.client import llm
 
 client = MultiServerMCPClient(
     {
