@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+  pgvector:
+    image: pgvector/pgvector:pg17
+    container_name: pgvector-bank
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cool_user        # логин для подключения
+      POSTGRES_PASSWORD: c00l_u3er
+      POSTGRES_DB: app_db            # дефолтная БД
+    ports:
+      - "5432:5432"                  # хост:контейнер
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+      # опционально: скрипты инициализации (см. ниже)
+      - ./init:/docker-entrypoint-initdb.d
+
+volumes:
+  pgvector_data:
