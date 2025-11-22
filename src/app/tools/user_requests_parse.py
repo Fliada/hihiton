@@ -9,24 +9,30 @@ from langchain_core.tools import tool
 
 from langchain_core.runnables import RunnableConfig
 
+
 class UserRequest(BaseModel):
-        bank_names: List[str] = Field(description="Список банков")
-        products: List[str] = Field(description="Услуги для сравнения")
-        criteria: Optional[str] = Field(
-            description="Критерии сравнения услуг и банков", default=None
-        )
-        
+    bank_names: List[str] = Field(description="Список банков")
+    products: List[str] = Field(description="Услуги для сравнения")
+    criteria: Optional[str] = Field(
+        description="Критерии сравнения услуг и банков", default=None
+    )
+
+
+import random
+
+fake_embedding = [random.random() for _ in range(384)]
 data = {
-    "id":1,
-    "bank_id":1,
-    "product_id":2,
-    "criterion":"процентная ставка",
-    "criterion_embed":[i for i in range(384)],
-    "source":"https://www.banki.ru",
-    "ts":"1",
-    "data": "15 процентов"
-}       
-        
+    "id": 1,
+    "bank_id": 1,
+    "product_id": 2,
+    "criterion": "процентная ставка",
+    "criterion_embed": [i for i in range(384)],
+    "source": "https://www.banki.ru",
+    "ts": "1",
+    "data": "15 процентов",
+}
+
+
 def get_data_list(query):
     connection = psycopg2.connect(
         host=getenv("DATABASE_HOST"),
@@ -78,6 +84,48 @@ def normalize_value_to_ids(
         if fuzz.ratio(value.lower(), best_match.lower()) >= threshold:
             result_ids.append(candidates[best_match])
     return result_ids
+
+
+import numpy as np
+
+vec = np.random.randn(384)
+fake_embedding = (vec / np.linalg.norm(vec)).tolist()
+
+
+def get_criterion_data(bank_id: int, product_id: int, embedding):
+    connection = psycopg2.connect(
+        host=getenv("DATABASE_HOST"),
+        port=getenv("DATABASE_PORT"),
+        database=getenv("DATABASE"),
+        user=getenv("DATABASE_LOGIN"),
+        password=getenv("DATABASE_PASSWORD"),
+    )
+    query = """
+        SELECT
+            id,
+            bank_id,
+            product_id,
+            criterion,
+            "source",
+            ts,
+            1 - (criterion_embed <=> %s::vector) AS cosine_similarity
+        FROM
+            public.bank_analysis
+        WHERE
+            bank_id = %s
+            AND product_id = %s
+        ORDER BY
+            criterion_embed <=> %s::vector
+        LIMIT 1;
+    """
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(query, (embedding, bank_id, product_id, embedding))
+            row = cursor.fetchone()
+            print(row)
+            return row
+    finally:
+        connection.close()
 
 
 def normalize_value(
@@ -133,15 +181,17 @@ def get_user_request_data_from_db(
         if validate_result(result.bank_names, banks) and validate_result(
             result.products, products
         ):
-            return {
-                "bank_ids": banks,
-                "product_ids": products,
-                "criteria": "названия критериев оценки.",
-            }
-        return {
-            "bank_ids": [0],
-            "product_ids": [0],
-            "criteria": "названия критериев оценки.",
-        }
+            #     return {
+            #         "bank_ids": banks,
+            #         "product_ids": products,
+            #         "criteria": "названия критериев оценки.",
+            #     }
+            # return {
+            #     "bank_ids": [0],
+            #     "product_ids": [0],
+            #     "criteria": "названия критериев оценки.",
+            # }
+            print(get_criterion_data(banks[0], products[0], fake_embedding))
+        print(get_criterion_data(banks[0], products[0], fake_embedding))
     except Exception as e:
         print(f"❌ Ошибка: {e}")
