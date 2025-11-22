@@ -13,5 +13,7 @@ dependencies = [
     "langfuse>=3.10.1",
     "langgraph>=1.0.3",
     "mcp>=1.22.0",
+    "psycopg2-binary>=2.9.11",
+    "pydantic>=2.12.4",
     "python-dotenv>=1.2.1",
 ]
