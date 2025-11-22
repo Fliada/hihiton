@@ -1,9 +1,10 @@
 from os import getenv
 from dotenv import load_dotenv
-from langchain_core.tools import tool
 import psycopg2
+from datetime import datetime
 
 load_dotenv()
+
 
 def get_data_list(table, column):
     connection = psycopg2.connect(
@@ -11,7 +12,7 @@ def get_data_list(table, column):
         port=getenv("DATABASE_PORT"),
         database=getenv("DATABASE"),
         user=getenv("DATABASE_LOGIN"),
-        password=getenv("DATABASE_PASSWORD")
+        password=getenv("DATABASE_PASSWORD"),
     )
 
     try:
@@ -27,14 +28,21 @@ def prepare_query(banks, products):
     queries = []
     for bank in banks:
         for product in products:
-            queries.append(f"Найди мне в интернете информацию о {product} для банка {bank}")
+            queries.append(
+                f"Найди мне в интернете информацию о {product} для банка {bank} за сегодня {datetime.now()}"
+            )
     return queries
-    
-@tool(parse_docstring=True)    
-def get_bank_and_products():
+
+
+def get_bank_and_products() -> list[str]:
+    """Функция для получения информации о каждом продукте для каждого банка"
+
+    Returns:
+        Возвращает список запросов в поисковую систему.
+    """
     banks = get_data_list("banks", "bank")
     products = get_data_list("products", "product")
-    
+
     queries = prepare_query(banks, products)
-    
+
     return queries
