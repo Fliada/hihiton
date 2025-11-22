@@ -2,9 +2,10 @@ from pydantic import BaseModel, Field
 from fuzzywuzzy import fuzz
 import psycopg2
 from os import getenv
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple, Any
 from app.infra.llm.client import llm
-
+from app.infra.embedder.get_embedding import get_embedding  
+from itertools import product
 from langchain_core.tools import tool
 
 from langchain_core.runnables import RunnableConfig
@@ -16,22 +17,6 @@ class UserRequest(BaseModel):
     criteria: Optional[str] = Field(
         description="Критерии сравнения услуг и банков", default=None
     )
-
-
-import random
-
-fake_embedding = [random.random() for _ in range(384)]
-data = {
-    "id": 1,
-    "bank_id": 1,
-    "product_id": 2,
-    "criterion": "процентная ставка",
-    "criterion_embed": [i for i in range(384)],
-    "source": "https://www.banki.ru",
-    "ts": "1",
-    "data": "15 процентов",
-}
-
 
 def get_data_list(query):
     connection = psycopg2.connect(
@@ -84,12 +69,6 @@ def normalize_value_to_ids(
         if fuzz.ratio(value.lower(), best_match.lower()) >= threshold:
             result_ids.append(candidates[best_match])
     return result_ids
-
-
-import numpy as np
-
-vec = np.random.randn(384)
-fake_embedding = (vec / np.linalg.norm(vec)).tolist()
 
 
 def get_criterion_data(bank_id: int, product_id: int, embedding):
@@ -154,6 +133,65 @@ def validate_result(query_entities: List[str], bd_entities: List[int]) -> bool:
     print(len(query_entities), len(bd_entities))
     return len(query_entities) == len(bd_entities)
 
+def get_criterion_data_for_all(
+    bank_product_embeddings: List[Tuple[int, int, List[float]]]
+) -> List[Tuple[Any, ...]]:
+    """
+    Получает наиболее релевантную запись из bank_analysis
+    для каждой тройки (bank_id, product_id, embedding).
+    
+    Args:
+        bank_product_embeddings: список вида [(bank_id, product_id, embedding), ...]
+    """
+    if not bank_product_embeddings:
+        return []
+
+    connection = psycopg2.connect(
+        host=getenv("DATABASE_HOST"),
+        port=getenv("DATABASE_PORT"),
+        database=getenv("DATABASE"),
+        user=getenv("DATABASE_LOGIN"),
+        password=getenv("DATABASE_PASSWORD"),
+    )
+
+    try:
+        with connection.cursor() as cursor:
+            # Формируем VALUES: (1, 101, '[...]'::vector), (2, 102, '[...]'::vector), ...
+            values_parts = []
+            for bank_id, product_id, emb in bank_product_embeddings:
+                emb_str = "[" + ",".join(str(x) for x in emb) + "]"
+                values_parts.append(f"({bank_id}, {product_id}, '{emb_str}'::vector)")
+            
+            values_clause = ", ".join(values_parts)
+
+            query = f"""
+                SELECT
+                    input.bank_id,
+                    input.product_id,
+                    ba.id,
+                    ba.criterion,
+                    ba."source",
+                    ba.ts,
+                    1 - (ba.criterion_embed <=> input.embedding) AS cosine_similarity
+                FROM
+                    (VALUES {values_clause}) AS input(bank_id, product_id, embedding)
+                LEFT JOIN LATERAL (
+                    SELECT *
+                    FROM public.bank_analysis ba2
+                    WHERE ba2.bank_id = input.bank_id
+                      AND ba2.product_id = input.product_id
+                    ORDER BY ba2.criterion_embed <=> input.embedding
+                    LIMIT 1
+                ) AS ba ON true
+                ORDER BY input.bank_id, input.product_id;
+            """
+
+            cursor.execute(query)
+            return cursor.fetchall()
+
+    finally:
+        connection.close()
+
 
 @tool(parse_docstring=True)
 def get_user_request_data_from_db(
@@ -166,7 +204,7 @@ def get_user_request_data_from_db(
         user_text: Фраза пользователя.
     """
     reference_banks = get_data_list("SELECT * FROM banks;")
-    reference_products = get_data_list("SELECT * FROM products;")
+    reference_products = get_data_list("SELECT id, product FROM products;")
     structured_llm = llm.with_structured_output(UserRequest)
 
     prompt = f"Извлеки из запроса пользователя: {user_text} нужные поля для поиска информации о банках"
@@ -178,9 +216,20 @@ def get_user_request_data_from_db(
         print(banks)
         products = normalize_value_to_ids(result.products, reference_products)
         print(products)
+        criterias = [result.criteria]
         if validate_result(result.bank_names, banks) and validate_result(
             result.products, products
         ):
+            results = []
+            for criteria in criterias:
+                bank_product_embeddings = [
+                    (bank, product, criteria)
+                    for bank, product in product(banks, products)
+                ]
+                print(bank_product_embeddings)
+                results.append(get_criterion_data_for_all(bank_product_embeddings))
+            print(results)
+            
             #     return {
             #         "bank_ids": banks,
             #         "product_ids": products,
@@ -191,7 +240,7 @@ def get_user_request_data_from_db(
             #     "product_ids": [0],
             #     "criteria": "названия критериев оценки.",
             # }
-            print(get_criterion_data(banks[0], products[0], fake_embedding))
-        print(get_criterion_data(banks[0], products[0], fake_embedding))
+            # print(get_criterion_data(banks[0], products[0], criterias[0]))
+            # Все пары (bank, product)
     except Exception as e:
         print(f"❌ Ошибка: {e}")
