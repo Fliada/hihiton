@@ -17,24 +17,24 @@ def get_data_list(table, column):
 
     try:
         with connection.cursor() as cursor:
-            cursor.execute(f"SELECT {column} FROM {table};")
+            cursor.execute(f"SELECT id, {column} FROM {table};")
             rows = cursor.fetchall()
-            return [row[0] for row in rows]
+            return {row[0]: row[1] for row in rows}
     finally:
         connection.close()
 
 
 def prepare_query(banks, products):
     queries = []
-    for bank in banks:
-        for product in products:
+    for bank_id, bank in banks.items():
+        for product_id, product in products.items():
             queries.append(
-                f"Найди мне в интернете информацию о {product} для банка {bank} за сегодня {datetime.now()}"
+                {f"Найди мне в интернете информацию о {product} для банка {bank}. Ответь в формате JSON: список словарей с полями source - источник данных(ссылка), content - найденная информация": {'bank_id': bank_id, 'product_id': product_id}}
             )
     return queries
 
 
-def get_bank_and_products() -> list[str]:
+def get_bank_and_products():
     """Функция для получения информации о каждом продукте для каждого банка"
 
     Returns:
