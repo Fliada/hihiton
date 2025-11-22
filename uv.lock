@@ -510,11 +510,11 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "deepagents", specifier = ">=0.2.5" },
+    { name = "deepagents", specifier = "==0.2.5" },
     { name = "fuzzywuzzy", specifier = ">=0.18.0" },
     { name = "httpcore", extras = ["http2"], specifier = ">=1.0.9" },
-    { name = "langchain", specifier = ">=1.0.8" },
-    { name = "langchain-community", specifier = ">=0.4.1" },
+    { name = "langchain", specifier = "==1.0.2" },
+    { name = "langchain-community", specifier = ">=0.0.38" },
     { name = "langchain-mcp-adapters", specifier = ">=0.1.13" },
     { name = "langchain-openai", specifier = ">=1.0.3" },
     { name = "langfuse", specifier = ">=3.10.1" },
@@ -708,16 +708,16 @@ wheels = [
 
 [[package]]
 name = "langchain"
-version = "1.0.8"
+version = "1.0.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain-core" },
     { name = "langgraph" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/62/07/4702bd5fc8a791e0cacf42379bd45115d24537ed0ce29e2c459fc841a4dd/langchain-1.0.8.tar.gz", hash = "sha256:d02f5a58a13eec9f24e4d6dbb8c0a9721582172a8f908061b31d3d10debf946f", size = 465201, upload-time = "2025-11-19T14:14:50.576Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b2/d6/bdf9ea27a92ed4685497c2659b5c7f703ba63bac4bd92351ca09bab3b924/langchain-1.0.2.tar.gz", hash = "sha256:22f814c7b4f5f76e945c35924ff288f6dfbe33747db2a029162ef1d4f8566493", size = 473869, upload-time = "2025-10-21T21:08:26.44Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c1/e9/d9e23971c9d9286f78b58c298ab6a2bc10181040cb3c84aacb5091f0201d/langchain-1.0.8-py3-none-any.whl", hash = "sha256:4925bb402b83f49f652beee15c627bcd72a5a551452a0f6154869207564940d5", size = 93738, upload-time = "2025-11-19T14:14:49.663Z" },
+    { url = "https://files.pythonhosted.org/packages/8c/06/0e03587da37173c29a58bf17312793c2453df9ca2912e9adfe869c120437/langchain-1.0.2-py3-none-any.whl", hash = "sha256:e0c5647ea47cde7feb9534f56f4496c7f86a45084ad9bd152e7b19739f210ead", size = 107831, upload-time = "2025-10-21T21:08:25.009Z" },
 ]
 
 [[package]]
