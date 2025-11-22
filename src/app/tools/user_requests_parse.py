@@ -166,24 +166,27 @@ def get_criterion_data_for_all(
 
             query = f"""
                 SELECT
-                    input.bank_id,
-                    input.product_id,
-                    ba.id,
-                    ba.criterion,
-                    ba."source",
-                    ba.ts,
-                    1 - (ba.criterion_embed <=> input.embedding) AS cosine_similarity
-                FROM
-                    (VALUES {values_clause}) AS input(bank_id, product_id, embedding)
-                LEFT JOIN LATERAL (
-                    SELECT *
-                    FROM public.bank_analysis ba2
-                    WHERE ba2.bank_id = input.bank_id
-                      AND ba2.product_id = input.product_id
-                    ORDER BY ba2.criterion_embed <=> input.embedding
-                    LIMIT 1
-                ) AS ba ON true
-                ORDER BY input.bank_id, input.product_id;
+                b.bank AS bank_name,
+                input.product_id,
+                p.product AS product_name,
+                ba.criterion,
+                ba."source",
+                ba.ts,
+                ba.data,
+                1 - (ba.criterion_embed <=> input.embedding) AS cosine_similarity
+            FROM
+                (VALUES {values_clause}) AS input(bank_id, product_id, embedding)
+            LEFT JOIN LATERAL (
+                SELECT *
+                FROM public.bank_analysis ba2
+                WHERE ba2.bank_id = input.bank_id
+                AND ba2.product_id = input.product_id
+                ORDER BY ba2.criterion_embed <=> input.embedding
+                LIMIT 1
+            ) AS ba ON true
+            LEFT JOIN public.banks b ON b.id = input.bank_id
+            LEFT JOIN public.products p ON p.id = input.product_id
+            ORDER BY input.bank_id, input.product_id;
             """
 
             cursor.execute(query)
@@ -216,31 +219,21 @@ def get_user_request_data_from_db(
         print(banks)
         products = normalize_value_to_ids(result.products, reference_products)
         print(products)
-        criterias = [result.criteria]
+        # criterias = [result.criteria]
+        criterias = ["ставка", "не ставка"]
         if validate_result(result.bank_names, banks) and validate_result(
             result.products, products
         ):
             results = []
             for criteria in criterias:
                 bank_product_embeddings = [
-                    (bank, product, criteria)
+                    (bank, product, get_embedding(criteria))
                     for bank, product in product(banks, products)
                 ]
-                print(bank_product_embeddings)
+                print(criteria)
+                print(get_criterion_data_for_all(bank_product_embeddings))
                 results.append(get_criterion_data_for_all(bank_product_embeddings))
+            print("#"*50)    
             print(results)
-            
-            #     return {
-            #         "bank_ids": banks,
-            #         "product_ids": products,
-            #         "criteria": "названия критериев оценки.",
-            #     }
-            # return {
-            #     "bank_ids": [0],
-            #     "product_ids": [0],
-            #     "criteria": "названия критериев оценки.",
-            # }
-            # print(get_criterion_data(banks[0], products[0], criterias[0]))
-            # Все пары (bank, product)
     except Exception as e:
         print(f"❌ Ошибка: {e}")
