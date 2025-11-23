@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hihiton Assistant</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div>
+          <h1>Hihiton Assistant</h1>
+          <p>Веб-версия телеграм-бота для работы с банковской аналитикой.</p>
+        </div>
+        <div class="status-badge" id="status-badge">Готов к работе</div>
+      </header>
+
+      <main class="chat-panel" id="messages" aria-live="polite"></main>
+
+      <form id="chat-form" class="chat-form" autocomplete="off">
+        <label class="visually-hidden" for="message-input">Сообщение</label>
+        <textarea
+          id="message-input"
+          name="message"
+          rows="3"
+          placeholder="Введите запрос..."
+          required
+        ></textarea>
+        <div class="chat-form__actions">
+          <small>
+            Сообщения и результаты остаются в рамках текущей сессии браузера.
+          </small>
+          <button type="submit" id="send-button">Отправить</button>
+        </div>
+      </form>
+    </div>
+
+    <script>
+      window.APP_CONFIG = {
+        apiBaseUrl: "http://localhost:8000",
+      };
+    </script>
+    <script src="./main.js"></script>
+  </body>
+</html>
