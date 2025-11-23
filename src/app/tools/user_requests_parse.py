@@ -17,6 +17,11 @@ class UserRequest(BaseModel):
     criteria: Optional[str] = Field(
         description="Критерии сравнения услуг и банков", default=None
     )
+   
+class ResultRequest(BaseModel):
+    table: List[str] = Field(description="Данные csv таблицы")
+    summary: List[str] = Field(description="Вывод")
+
 
 def get_data_list(query):
     connection = psycopg2.connect(
@@ -164,16 +169,39 @@ def get_criterion_data_for_all(
             
             values_clause = ", ".join(values_parts)
 
+            # query = f"""
+            #     SELECT
+            #     b.bank AS bank_name,
+            #     input.product_id,
+            #     p.product AS product_name,
+            #     ba.criterion,
+            #     ba."source",
+            #     ba.ts,
+            #     ba.data,
+            #     1 - (ba.criterion_embed <=> input.embedding) AS cosine_similarity
+            # FROM
+            #     (VALUES {values_clause}) AS input(bank_id, product_id, embedding)
+            # LEFT JOIN LATERAL (
+            #     SELECT *
+            #     FROM public.bank_analysis ba2
+            #     WHERE ba2.bank_id = input.bank_id
+            #     AND ba2.product_id = input.product_id
+            #     ORDER BY ba2.criterion_embed <=> input.embedding
+            #     LIMIT 1
+            # ) AS ba ON true
+            # LEFT JOIN public.banks b ON b.id = input.bank_id
+            # LEFT JOIN public.products p ON p.id = input.product_id
+            # ORDER BY input.bank_id, input.product_id;
+            # """
+
             query = f"""
                 SELECT
                 b.bank AS bank_name,
-                input.product_id,
                 p.product AS product_name,
                 ba.criterion,
-                ba."source",
-                ba.ts,
                 ba.data,
-                1 - (ba.criterion_embed <=> input.embedding) AS cosine_similarity
+                ba."source",
+                ba.ts
             FROM
                 (VALUES {values_clause}) AS input(bank_id, product_id, embedding)
             LEFT JOIN LATERAL (
@@ -188,7 +216,6 @@ def get_criterion_data_for_all(
             LEFT JOIN public.products p ON p.id = input.product_id
             ORDER BY input.bank_id, input.product_id;
             """
-
             cursor.execute(query)
             return cursor.fetchall()
 
@@ -220,20 +247,64 @@ def get_user_request_data_from_db(
         products = normalize_value_to_ids(result.products, reference_products)
         print(products)
         # criterias = [result.criteria]
-        criterias = ["ставка", "не ставка"]
-        if validate_result(result.bank_names, banks) and validate_result(
-            result.products, products
-        ):
-            results = []
-            for criteria in criterias:
-                bank_product_embeddings = [
-                    (bank, product, get_embedding(criteria))
-                    for bank, product in product(banks, products)
-                ]
-                print(criteria)
-                print(get_criterion_data_for_all(bank_product_embeddings))
-                results.append(get_criterion_data_for_all(bank_product_embeddings))
-            print("#"*50)    
-            print(results)
+        criterias = ["'процентная ставка", "кешбэк"]
+        # if validate_result(result.bank_names, banks) and validate_result(
+        #     result.products, products
+        # ):
+        results = []
+        csv_results = []
+        for criteria in criterias:
+            bank_product_embeddings = [
+                (bank, product, get_embedding(criteria))
+                for bank, product in product(banks, products)
+            ]
+            print(criteria)
+            print(get_criterion_data_for_all(bank_product_embeddings))
+            results.append(get_criterion_data_for_all(bank_product_embeddings))
+        print("#"*50)
+        import pandas as pd    
+        print(results)
+        all_rows = []
+        for criterion_group in results:
+            for row in criterion_group:
+                bank, produc, metric, value, url, data = row
+                print(data)
+                all_rows.append({
+                    'Банк': bank,
+                    'Тип продукта': produc,
+                    'Показатель': metric,
+                    'Значение': value
+                    # URL можно сохранить при необходимости, но для сводки он не нужен
+                })
+
+        # Создаём DataFrame
+        df = pd.DataFrame(all_rows)
+        df['Критерий'] = df['Тип продукта'] + ': ' + df['Показатель']
+
+        # Используем pivot_table с aggfunc — например, первое значение
+        pivot = df.pivot_table(
+            index='Банк',
+            columns='Критерий',
+            values='Значение',
+            aggfunc='first',          # или ','.join, если хотите объединить все значения
+            fill_value=''             # заменить NaN на пустую строку
+        ).reset_index()
+        print(df)
+        # Убираем "name" у колонок, если есть
+        pivot.columns.name = None
+
+        pivot.to_csv('итоговая_таблица.csv', index=False, encoding='utf-8')
+        print(pivot)
+
+        print(pivot)
+        prompt = f"Составь из данных {results} csv таблицу по критериям {criterias} и банкам {result.bank_names}"
+        structured_llm = llm.with_structured_output(ResultRequest)
+        result: ResultRequest = structured_llm.invoke(prompt)
+        print(result)
+        
+
+            
+            # structured_llm = llm.with_structured_output(UserRequest)
+
     except Exception as e:
         print(f"❌ Ошибка: {e}")

@@ -19,4 +19,6 @@ dependencies = [
     "psycopg2-binary>=2.9.11",
     "pydantic>=2.12.4",
     "python-dotenv>=1.2.1",
+    "pandas>=2.3.3",
+    "plt>=0.2.0",
 ]
