@@ -1,16 +1,53 @@
 import json
 import re
 import traceback
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Union
 
 from pydantic import ValidationError
 
+from src.app.tools.data_processing_tools import process_raw_data_for_criteria
 from src.app.agents.web_search_agent.run import run_web_search_agent
 from src.app.agents.web_search_agent.tools import (
     get_bank_and_products,
     save_raw_data,
 )
 from src.app.domain.models import WebSearchItem, WebSearchResult
+from src.app.tools.data_processor import DataProcessor  # Импортируем обработчик данных
+
+
+def process_todays_data():
+    """Обрабатывает только сегодняшние сырые данные"""
+    print("\n" + "=" * 60)
+    print("НАЧАЛО ОБРАБОТКИ СЕГОДНЯШНИХ ДАННЫХ")
+    print("=" * 60)
+
+    try:
+        today_date = datetime.now(timezone.utc).date()
+        print(f"Текущая дата (UTC): {today_date}")
+
+        # Создаем запрос для инструмента обработки
+        tool_input = {
+            "bank_id": None,  # Все банки
+            "product_id": None,  # Все продукты
+            "criteria_list": None,  # Все критерии
+            "force_today": True,  # Только сегодняшние данные
+        }
+
+        print("Вызов инструмента обработки данных...")
+        result = process_raw_data_for_criteria.invoke(tool_input)
+
+        print("\n" + "=" * 60)
+        print("РЕЗУЛЬТАТ ОБРАБОТКИ:")
+        print("=" * 60)
+        print(result)
+
+        return True
+
+    except Exception as e:
+        print(f"\nКРИТИЧЕСКАЯ ОШИБКА ПРИ ОБРАБОТКЕ ДАННЫХ: {str(e)}")
+        traceback.print_exc()
+        return False
 
 
 def normalize_agent_response(raw_response: Any) -> List[Dict[str, str]]:
@@ -136,6 +173,7 @@ def get_raw_data():
         return
 
     print(f"Processing {len(queries)} search queries...")
+    any_data_saved = False
 
     for query in queries:
         try:
@@ -143,11 +181,12 @@ def get_raw_data():
             metadata = list(query.values())[0]
 
             bank_id = metadata["bank_id"]
-            if bank_id == 2:
-                continue
+            # Хардкод, так как поиск иногда прерывался
+            # if bank_id < 6:
+            #     continue
             product_id = metadata["product_id"]
-            if product_id <= 8 and bank_id ==3:
-                continue
+            # if product_id <= 17 and bank_id == 6:
+            #     continue
 
             print(f"\nProcessing search for bank_id={bank_id}, product_id={product_id}")
             print(f"Search query: {prompt[:100]}...")
@@ -175,6 +214,7 @@ def get_raw_data():
             success = save_raw_data(result)
 
             if success:
+                any_data_saved = True
                 print(
                     f"Successfully processed {len(result.items)} sources for bank_id={bank_id}, product_id={product_id}"
                 )
@@ -190,8 +230,56 @@ def get_raw_data():
             traceback.print_exc()
             continue
 
+    # После завершения всех запросов запускаем обработку данных за сегодня
+    if any_data_saved:
+        print("\n" + "=" * 50)
+        print("STARTING DATA PROCESSING FOR TODAY'S RAW DATA")
+        print("=" * 50)
+
+        try:
+            start_time = datetime.now()
+            processor = DataProcessor()
+            processing_success = processor.run()
+
+            end_time = datetime.now()
+            duration = end_time - start_time
+
+            if processing_success:
+                print(
+                    f"\nDATA PROCESSING COMPLETED SUCCESSFULLY in {duration.total_seconds():.2f} seconds"
+                )
+                print(f"Processed data for {datetime.now().date()}")
+            else:
+                print(
+                    f"\nDATA PROCESSING FAILED after {duration.total_seconds():.2f} seconds"
+                )
+                print("Check logs for details")
+
+        except Exception as e:
+            print(f"\nCRITICAL ERROR IN DATA PROCESSING: {str(e)}")
+            traceback.print_exc()
+    else:
+        print("\nNo raw data was saved today. Skipping data processing.")
+
     print("\nWeb search cron job completed!")
 
 
+# if __name__ == "__main__":
+#     get_raw_data()
+
+
+def main():
+    """Основная функция для cron job"""
+    print(f"\n🚀 ЗАПУСК ЕЖЕДНЕВНОЙ ОБРАБОТКИ ДАННЫХ: {datetime.now()}")
+
+    success = process_todays_data()
+
+    if success:
+        print(f"\n✅ ОБРАБОТКА ЗАВЕРШЕНА УСПЕШНО: {datetime.now()}")
+    else:
+        print(f"\n❌ ОБРАБОТКА ЗАВЕРШЕНА С ОШИБКАМИ: {datetime.now()}")
+        exit(1)
+
+
 if __name__ == "__main__":
-    get_raw_data()
+    main()

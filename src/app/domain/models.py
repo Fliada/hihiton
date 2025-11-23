@@ -39,3 +39,13 @@ class WebSearchResult(BaseModel):
         if not v:
             raise ValueError("Items list cannot be empty")
         return v
+
+
+class CriterionWithEmbedding(BaseModel):
+    bank_id: int
+    product_id: int
+    criterion: str
+    criterion_embed: List[float]  # Вектор эмбеддинга
+    source: str
+    data: str
+    ts: datetime

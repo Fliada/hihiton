@@ -1,16 +1,19 @@
 import json
+import os
 import re
 from datetime import datetime
 from functools import lru_cache
 from os import getenv
 from typing import Any, Dict, List
+from urllib.parse import urljoin
 
+import httpx
 import psycopg2
 from dotenv import load_dotenv
+from psycopg2.extras import execute_values
 from pydantic import ValidationError
 
-from src.app.agents.web_search_agent.run import run_web_search_agent
-from src.app.domain.models import WebSearchItem, WebSearchResult
+from src.app.domain.models import CriterionWithEmbedding, WebSearchItem, WebSearchResult
 
 load_dotenv()
 
@@ -135,3 +138,67 @@ def save_raw_data(result: WebSearchResult) -> bool:
         print(f"Database error: {str(e)}")
     finally:
         return success
+
+
+def get_embedding(text: str) -> List[float]:
+    """Получает эмбеддинг для текста через внешний сервис"""
+    embedding_url = os.getenv("EMBEDDING_SERVICE_URL")
+    if not embedding_url:
+        raise ValueError("EMBEDDING_SERVICE_URL is not set in environment variables")
+
+    try:
+        with httpx.Client(timeout=30.0) as client:
+            response = client.post(
+                urljoin(embedding_url, "/dialog/nlp/embedding/paraphrase-multilingual-MiniLM-L12-v2"),
+                json={"text": text},
+                headers={"Content-Type": "application/json"},
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data.get("embedding", [])
+    except Exception as e:
+        print(f"Error getting embedding: {str(e)}")
+        # Возвращаем нулевой вектор как fallback
+        return [0.0] * 384  # Размер по умолчанию для многих эмбеддинг-моделей
+
+
+def save_processed_data(criteria_with_embeddings: List[CriterionWithEmbedding]) -> bool:
+    """Сохраняет обработанные данные в таблицу bank_analysis"""
+    conn = get_connection()
+
+    try:
+        with conn.cursor() as cursor:
+            # Подготавливаем данные для пакетной вставки
+            values = [
+                (
+                    criterion.bank_id,
+                    criterion.product_id,
+                    criterion.criterion,
+                    criterion.criterion_embed,  # PostgreSQL поддерживает массивы
+                    criterion.source,
+                    criterion.data,
+                    criterion.ts,
+                )
+                for criterion in criteria_with_embeddings
+            ]
+
+            execute_values(
+                cursor,
+                """
+                INSERT INTO bank_analysis (
+                    bank_id, product_id, criterion, criterion_embed, source, data, ts
+                ) VALUES %s
+                """,
+                values,
+            )
+
+        conn.commit()
+        print(
+            f"Successfully saved {len(criteria_with_embeddings)} criteria to bank_analysis"
+        )
+        return True
+
+    except Exception as e:
+        conn.rollback()
+        print(f"Error saving processed data: {str(e)}")
+        return False
