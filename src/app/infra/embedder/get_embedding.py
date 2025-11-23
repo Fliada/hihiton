@@ -1,16 +1,14 @@
-import logging
-from os import getenv
-from typing import List
-
 import requests
+from os import getenv
 from dotenv import load_dotenv
+from typing import List
+import logging
 
 # Настройка логирования (опционально)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 load_dotenv()
-
 
 def get_embedding(text: str) -> List[float]:
     """
@@ -32,7 +30,11 @@ def get_embedding(text: str) -> List[float]:
     embedder_url = getenv("EMBEDDER_URL")
 
     try:
-        response = requests.post(embedder_url, json={"text": text}, timeout=30)
+        response = requests.post(
+            embedder_url,
+            json={"text": text},
+            timeout=30
+        )
         response.raise_for_status()
 
         data = response.json()
