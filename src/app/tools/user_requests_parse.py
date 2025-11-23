@@ -44,7 +44,7 @@ def get_data_list(query):
 
 def normalize_value_to_ids(
     values: List[str],
-    candidates: Dict[str, int],  # например, Dict[str, int]
+    candidates: Dict[str, int],
     threshold: int = 80,
 ) -> List[int]:
     """
@@ -163,38 +163,12 @@ def get_criterion_data_for_all(
 
     try:
         with connection.cursor() as cursor:
-            # Формируем VALUES: (1, 101, '[...]'::vector), (2, 102, '[...]'::vector), ...
             values_parts = []
             for bank_id, product_id, emb in bank_product_embeddings:
                 emb_str = "[" + ",".join(str(x) for x in emb) + "]"
                 values_parts.append(f"({bank_id}, {product_id}, '{emb_str}'::vector)")
 
             values_clause = ", ".join(values_parts)
-
-            # query = f"""
-            #     SELECT
-            #     b.bank AS bank_name,
-            #     input.product_id,
-            #     p.product AS product_name,
-            #     ba.criterion,
-            #     ba."source",
-            #     ba.ts,
-            #     ba.data,
-            #     1 - (ba.criterion_embed <=> input.embedding) AS cosine_similarity
-            # FROM
-            #     (VALUES {values_clause}) AS input(bank_id, product_id, embedding)
-            # LEFT JOIN LATERAL (
-            #     SELECT *
-            #     FROM public.bank_analysis ba2
-            #     WHERE ba2.bank_id = input.bank_id
-            #     AND ba2.product_id = input.product_id
-            #     ORDER BY ba2.criterion_embed <=> input.embedding
-            #     LIMIT 1
-            # ) AS ba ON true
-            # LEFT JOIN public.banks b ON b.id = input.bank_id
-            # LEFT JOIN public.products p ON p.id = input.product_id
-            # ORDER BY input.bank_id, input.product_id;
-            # """
 
             query = f"""
                 SELECT
@@ -218,54 +192,6 @@ def get_criterion_data_for_all(
                 LEFT JOIN public.products p ON p.id = input.product_id
                 ORDER BY input.bank_id, input.product_id;
             """
-
-            # query = f"""
-            #     SELECT
-            #     b.bank AS bank_name,
-            #     p.product AS product_name,
-            #     ba.criterion,
-            #     ba.data,
-            #     ba."source",
-            #     ba.ts
-            # FROM
-            #     (VALUES {values_clause}) AS input(bank_id, product_id, embedding)
-            # LEFT JOIN LATERAL (
-            #     SELECT *
-            #     FROM public.bank_analysis ba2
-            #     WHERE ba2.bank_id = input.bank_id
-            #     AND ba2.product_id = input.product_id
-            #     ORDER BY ba2.criterion_embed <=> input.embedding
-            #     LIMIT 5
-            # ) AS ba ON true
-            # LEFT JOIN public.banks b ON b.id = input.bank_id
-            # LEFT JOIN public.products p ON p.id = input.product_id
-            # ORDER BY input.bank_id, input.product_id;
-            # """
-
-            # query = f"""
-            #    SELECT
-            #     b.bank AS bank_name,
-            #     p.product AS product_name,
-            #     ba.criterion,
-            #     ba.data,
-            #     ba."source",
-            #     ba.ts,
-            #     1 - (ba.criterion_embed <=> input.embedding) AS similarity
-            # FROM
-            #     (VALUES {values_clause}) AS input(bank_id, product_id, embedding)
-            # LEFT JOIN LATERAL (
-            #     SELECT *
-            #     FROM public.bank_analysis ba2
-            #     WHERE ba2.bank_id = input.bank_id
-            #     AND ba2.product_id = input.product_id
-            #     AND ba2.criterion_embed <=> input.embedding <= 0.3  -- соответствует similarity >= 0.7
-            #     ORDER BY ba2.criterion_embed <=> input.embedding
-            # ) AS ba ON true
-            # LEFT JOIN public.banks b ON b.id = input.bank_id
-            # LEFT JOIN public.products p ON p.id = input.product_id
-            # WHERE ba.criterion IS NOT NULL  -- необязательно: исключает строки без совпадений
-            # ORDER BY input.bank_id, input.product_id, similarity DESC;
-            # """
             cursor.execute(query)
             return cursor.fetchall()
 
@@ -291,29 +217,18 @@ def get_user_request_data_from_db(
 
     try:
         result: UserRequest = structured_llm.invoke(prompt)
-        print(result)
         banks = normalize_value_to_ids(result.bank_names, reference_banks)
-        print(banks)
         products = normalize_value_to_ids(result.products, reference_products)
-        print(products)
         criterias = [result.criteria]
-        # criterias = ["максимальный срок"]
-        # if validate_result(result.bank_names, banks) and validate_result(
-        #     result.products, products
-        # ):
         results = []
         for criteria in criterias:
             bank_product_embeddings = [
                 (bank, product, get_embedding(criteria))
                 for bank, product in product(banks, products)
             ]
-            print(criteria)
-            print(get_criterion_data_for_all(bank_product_embeddings))
             results.append(get_criterion_data_for_all(bank_product_embeddings))
-        print("#" * 50)
         import pandas as pd
 
-        print(results)
         all_rows = []
         for criterion_group in results:
             for row in criterion_group:
@@ -328,11 +243,9 @@ def get_user_request_data_from_db(
                     }
                 )
 
-        # Создаём DataFrame
         df = pd.DataFrame(all_rows)
         df["Критерий"] = df["Тип продукта"] + ": " + df["Показатель"]
 
-        # Используем pivot_table с aggfunc — например, первое значение
         pivot = df.pivot_table(
             index="Банк",
             columns="Критерий",
@@ -340,7 +253,6 @@ def get_user_request_data_from_db(
             aggfunc="first",
             fill_value="",
         ).reset_index()
-        print(df)
         pivot.columns.name = None
 
         pivot.to_csv(r"app\resourses\report.csv", index=False, encoding="utf-8")
