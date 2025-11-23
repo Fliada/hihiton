@@ -172,7 +172,6 @@ class WebContentFetcher:
                 text = soup.get_text(separator=" ", strip=True)
 
             text = re.sub(r"\s+", " ", text).strip()
-            text = re.sub(r"[^\x00-\x7F]+", " ", text)
 
             if len(text) > 10000:
                 text = text[:10000] + "... [content truncated]"

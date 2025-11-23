@@ -4,7 +4,7 @@ import re
 from datetime import datetime
 from functools import lru_cache
 from os import getenv
-from typing import Any, Dict, List
+from typing import Dict, List, Optional
 from urllib.parse import urljoin
 
 import httpx
@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from psycopg2.extras import execute_values
 from pydantic import ValidationError
 from langchain_core.tools import tool
+from fuzzywuzzy import fuzz
 
 from src.app.domain.models import CriterionWithEmbedding, WebSearchItem, WebSearchResult
 
@@ -48,6 +49,64 @@ def get_data_list(table: str, column: str) -> Dict[int, str]:
     except Exception as e:
         print(f"Error fetching data from {table}: {str(e)}")
         return {}
+
+
+def resolve_entity_id(
+    table: str, column: str, raw_value: Optional[str], threshold: int = 65
+) -> Optional[int]:
+    if not raw_value:
+        return None
+
+    value = str(raw_value).strip()
+    if not value:
+        return None
+
+    conn = get_connection()
+
+    # Если передан числовой ID
+    try:
+        numeric_id = int(value)
+        with conn.cursor() as cursor:
+            cursor.execute(f"SELECT id FROM {table} WHERE id = %s", (numeric_id,))
+            row = cursor.fetchone()
+            if row:
+                return row[0]
+    except ValueError:
+        pass
+
+    # Пытаемся найти точное совпадение
+    with conn.cursor() as cursor:
+        cursor.execute(f"SELECT id, {column} FROM {table}")
+        rows = cursor.fetchall()
+
+    lower_value = value.lower()
+    for row_id, name in rows:
+        if name and name.lower() == lower_value:
+            return row_id
+
+    # Фаззи-поиск
+    best_id = None
+    best_score = 0
+    for row_id, name in rows:
+        if not name:
+            continue
+        score = fuzz.ratio(lower_value, name.lower())
+        if score > best_score:
+            best_score = score
+            best_id = row_id
+
+    if best_score >= threshold:
+        return best_id
+
+    return None
+
+
+def resolve_bank_id(bank_value: Optional[str]) -> Optional[int]:
+    return resolve_entity_id("banks", "bank", bank_value)
+
+
+def resolve_product_id(product_value: Optional[str]) -> Optional[int]:
+    return resolve_entity_id("products", "product", product_value)
 
 
 def prepare_query(
@@ -145,25 +204,46 @@ def save_raw_data(result: WebSearchResult) -> List[int]:
 
 
 @tool(parse_docstring=True)
-def save_raw_web_data(bank_id: int, product_id: int, source: str, content: str) -> str:
+def save_raw_web_data(
+    bank: str,
+    product: str,
+    source: str,
+    content: str,
+) -> str:
     """
-    Сохраняет один источник (source/content) в таблицу bank_buffer и возвращает ID записей.
+    Сохраняет один источник (source/content) в банк-буфер и возвращает ID созданных записей.
 
     Args:
-        bank_id: ID банка.
-        product_id: ID продукта.
+        bank: Название банка (или числовой ID).
+        product: Название продукта (или числовой ID).
         source: Ссылка на источник (URL).
         content: Текстовое содержимое страницы.
 
     Returns:
-        JSON-строка с полями status, record_ids и message. Используй record_ids, чтобы сразу вызвать
-        process_raw_data_for_criteria только для добавленных записей.
+        JSON-строка с полями status, record_ids и message. Полученные record_ids
+        нужно передать в `process_raw_data_for_criteria`, чтобы обработать именно эти записи.
     """
     try:
+        bank_id = resolve_bank_id(bank)
+        product_id = resolve_product_id(product)
+
+        if bank_id is None:
+            raise ValueError(
+                f"Не удалось определить банк по значению '{bank}'. Используй название или ID из базы."
+            )
+        if product_id is None:
+            raise ValueError(
+                f"Не удалось определить продукт по значению '{product}'. Используй корректное название или ID."
+            )
+
+        cleaned_content = content.strip()
+        if not cleaned_content:
+            raise ValueError("Пустое содержимое страницы (content).")
+
         payload = WebSearchResult(
             bank_id=bank_id,
             product_id=product_id,
-            items=[WebSearchItem(source=source, content=content)],
+            items=[WebSearchItem(source=source.strip(), content=cleaned_content)],
         )
         record_ids = save_raw_data(payload)
 
@@ -174,6 +254,8 @@ def save_raw_web_data(bank_id: int, product_id: int, source: str, content: str) 
             {
                 "status": "success",
                 "record_ids": record_ids,
+                "bank_id": bank_id,
+                "product_id": product_id,
                 "message": "Сырые данные сохранены. Передайте record_ids в process_raw_data_for_criteria.",
             },
             ensure_ascii=False,
