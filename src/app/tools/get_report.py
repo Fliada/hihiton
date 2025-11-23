@@ -224,8 +224,8 @@ def get_criterion_data_for_all(
 
 
 @tool(parse_docstring=True)
-def get_user_request_data_from_db(
-    user_text: str,
+def get_report(
+    query_data: str,
     config: RunnableConfig = {"configurable": {"thread_id": ""}},
 ) -> dict:
     """Выделяет данные из фразы пользователя и делает по ним запрос в БД для получения информации по запросу.
@@ -252,6 +252,7 @@ def get_user_request_data_from_db(
         #     result.products, products
         # ):
         results = []
+        csv_results = []
         for criteria in criterias:
             bank_product_embeddings = [
                 (bank, product, get_embedding(criteria))
@@ -291,13 +292,14 @@ def get_user_request_data_from_db(
         print(df)
         pivot.columns.name = None
 
-        pivot.to_csv(r'app\resourses\report.csv', index=False, encoding='utf-8')
-        
+        pivot.to_csv('итоговая_таблица.csv', index=False, encoding='utf-8')
+        print(pivot)
+
+        print(pivot)
         prompt = f"Составь из данных {results} csv таблицу по критериям {criterias} и банкам {result.bank_names}"
         structured_llm = llm.with_structured_output(ResultRequest)
         result: ResultRequest = structured_llm.invoke(prompt)
         print(result)
-        return results
-    
+        
     except Exception as e:
         print(f"❌ Ошибка: {e}")

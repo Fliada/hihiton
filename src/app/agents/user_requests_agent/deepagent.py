@@ -4,8 +4,10 @@ from langfuse.langchain import CallbackHandler
 from langgraph.checkpoint.memory import MemorySaver
 
 from app.tools.user_requests_parse import get_user_request_data_from_db
+# from app.tools.get_report import get_report
 from app.infra.llm.client import llm
 
+# tools = [get_user_request_data_from_db, get_report]
 
 tools = [get_user_request_data_from_db]
 
@@ -14,6 +16,7 @@ system_prompt = """# Ты - агент помощник по работе с а�
 
 # Твои основные функции:
 1) вызывать функцию для получения данных из базы. В результате ты получишь списки id. Выведи их в ответ пользователю.
+2) 
 
 Правила получения данных:
 1) вызови функцию СТРОГО один раз!
