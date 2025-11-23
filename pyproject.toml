@@ -17,8 +17,18 @@ dependencies = [
     "loguru>=0.7.3",
     "mcp>=1.22.0",
     "psycopg2-binary>=2.9.11",
-    "pydantic>=2.12.4",
+    "pydantic==2.11",
     "python-dotenv>=1.2.1",
     "pandas>=2.3.3",
     "plt>=0.2.0",
+    "fastapi>=0.121.3",
+    "aiogram==3.22",
 ]
+
+[tool.uv.sources]
+torch = { index = "aiogram" }
+
+[[tool.uv.index]]
+name = "aiogram"
+url = "https://github.com/aio-libs/aiohttp/releases/download/v3.13.0/aiohttp-3.13.0-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl"
+explicit = true
