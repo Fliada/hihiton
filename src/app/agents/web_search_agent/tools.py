@@ -99,12 +99,12 @@ def save_raw_data(result: WebSearchResult) -> bool:
         with conn.cursor() as cursor:
             for item in result.items:
                 try:
-                    # Валидация каждого элемента перед сохранением
+   
                     validated_item = WebSearchItem(
                         source=item.source, content=item.content
                     )
 
-                    # Просто вставляем новую запись без ON CONFLICT
+           
                     cursor.execute(
                         """
                         INSERT INTO bank_buffer (bank_id, product_id, raw_data, source, ts)
@@ -159,8 +159,8 @@ def get_embedding(text: str) -> List[float]:
             return data.get("embedding", [])
     except Exception as e:
         print(f"Error getting embedding: {str(e)}")
-        # Возвращаем нулевой вектор как fallback
-        return [0.0] * 384  # Размер по умолчанию для многих эмбеддинг-моделей
+
+        return [0.0] * 384
 
 
 def save_processed_data(criteria_with_embeddings: List[CriterionWithEmbedding]) -> bool:
@@ -169,13 +169,13 @@ def save_processed_data(criteria_with_embeddings: List[CriterionWithEmbedding]) 
 
     try:
         with conn.cursor() as cursor:
-            # Подготавливаем данные для пакетной вставки
+
             values = [
                 (
                     criterion.bank_id,
                     criterion.product_id,
                     criterion.criterion,
-                    criterion.criterion_embed,  # PostgreSQL поддерживает массивы
+                    criterion.criterion_embed,
                     criterion.source,
                     criterion.data,
                     criterion.ts,

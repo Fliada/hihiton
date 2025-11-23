@@ -38,7 +38,6 @@ def process_raw_data_for_criteria(
     try:
         processor = DataProcessor()
 
-        # Фильтрация данных
         today_date = datetime.now(timezone.utc).date() if force_today else None
 
         conn = get_connection()
@@ -46,7 +45,6 @@ def process_raw_data_for_criteria(
         total_criteria = 0
 
         with conn.cursor() as cursor:
-            # Строим запрос с фильтрацией
             query = """
                 SELECT id, bank_id, product_id, raw_data, source, ts
                 FROM bank_buffer
@@ -82,7 +80,6 @@ def process_raw_data_for_criteria(
 
             logger.info(f"Найдено {len(records)} записей для обработки")
 
-            # Обрабатываем каждую запись
             for record in records:
                 record_data = {
                     "id": record[0],
@@ -93,13 +90,11 @@ def process_raw_data_for_criteria(
                     "ts": record[5],
                 }
 
-                # Извлекаем критерии
                 processed_criteria = processor.process_single_record_with_criteria(
                     record_data, criteria_list
                 )
 
                 if processed_criteria:
-                    # Сохраняем обработанные данные
                     success = processor.save_criteria_to_db(processed_criteria)
                     if success:
                         processed_records += 1

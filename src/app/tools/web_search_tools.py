@@ -27,17 +27,17 @@ class RateLimiter:
 
     def acquire(self):
         now = datetime.now()
-        # Remove requests older than 1 minute
+   
         self.requests = [
             req for req in self.requests if now - req < timedelta(minutes=1)
         ]
 
         if len(self.requests) >= self.requests_per_minute:
-            # Calculate wait time until the oldest request expires
+
             oldest_request = self.requests[0]
             wait_time = (oldest_request + timedelta(minutes=1) - now).total_seconds()
             if wait_time > 0:
-                time.sleep(wait_time)  # Use time.sleep for synchronous code
+                time.sleep(wait_time)  
 
         self.requests.append(now)
 
@@ -51,10 +51,10 @@ class SerperSearcher:
             raise ValueError("SERPER_API_KEY environment variable is not set")
 
         self.headers = {"X-API-KEY": self.api_key, "Content-Type": "application/json"}
-        # Conservative rate limiting for free tier (100 requests/month)
+    
         self.rate_limiter = RateLimiter(
             requests_per_minute=5
-        )  # 1 request every 12 seconds
+        )  
 
     def format_results_for_llm(self, results: List[SearchResult]) -> str:
         """Format results in a natural language style that's easier for LLMs to process"""
@@ -68,13 +68,13 @@ class SerperSearcher:
             output.append(f"{result.position}. {result.title}")
             output.append(f"   URL: {result.link}")
             output.append(f"   Summary: {result.snippet}")
-            output.append("")  # Empty line between results
+            output.append("")  
 
         return "\n".join(output)
 
     def search(self, query: str, max_results: int = 10) -> List[SearchResult]:
         try:
-            # Apply rate limiting
+    
             self.rate_limiter.acquire()
 
             payload = {"q": query, "num": max_results}
@@ -86,12 +86,12 @@ class SerperSearcher:
                 response.raise_for_status()
                 data = response.json()
 
-            # Handle API errors
+  
             if "error" in data:
                 print(f"Serper API error: {data['error']}", file=sys.stderr)
                 return []
 
-            # Parse organic results
+        
             results = []
             organic_results = data.get("organic", [])
             for i, result in enumerate(organic_results[:max_results]):

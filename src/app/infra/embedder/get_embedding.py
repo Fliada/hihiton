@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 from typing import List
 import logging
 
-# Настройка логирования (опционально)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 

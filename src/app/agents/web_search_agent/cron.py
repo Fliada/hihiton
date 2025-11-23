@@ -15,7 +15,7 @@ from src.app.agents.web_search_agent.tools import (
     save_raw_data,
 )
 from src.app.domain.models import WebSearchItem, WebSearchResult
-from src.app.tools.data_processor import DataProcessor  # Импортируем обработчик данных
+from src.app.tools.data_processor import DataProcessor
 
 
 def normalize_agent_response(raw_response: Any) -> List[Dict[str, str]]:
@@ -35,7 +35,6 @@ def normalize_agent_response(raw_response: Any) -> List[Dict[str, str]]:
         print("No raw response received")
         return []
 
-    # Если ответ уже список с нужной структурой
     if isinstance(raw_response, list) and all(
         isinstance(item, dict) and "source" in item and "content" in item
         for item in raw_response
@@ -43,10 +42,8 @@ def normalize_agent_response(raw_response: Any) -> List[Dict[str, str]]:
         print(f"Response already in correct format with {len(raw_response)} items")
         return raw_response
 
-    # Пытаемся распарсить как JSON строку
     try:
         if isinstance(raw_response, str):
-            # Убираем markdown форматирование и лишние пробелы
             clean_text = re.sub(r"```json|```", "", raw_response).strip()
             if clean_text.startswith("[") and clean_text.endswith("]"):
                 try:
@@ -90,7 +87,6 @@ def process_search_results(
 
     print(f"Processing results for bank_id={bank_id}, product_id={product_id}")
 
-    # Нормализуем ответ в нужный формат
     normalized_items = normalize_agent_response(raw_response)
 
     if not normalized_items:
@@ -101,7 +97,6 @@ def process_search_results(
 
     print(f"Found {len(normalized_items)} items after normalization")
 
-    # Создаем список WebSearchItem
     items = []
     for i, item in enumerate(normalized_items):
         source = item.get("source", "").strip()
@@ -149,12 +144,8 @@ def get_raw_data():
             metadata = list(query.values())[0]
 
             bank_id = metadata["bank_id"]
-            # Хардкод, так как поиск иногда прерывался
-            # if bank_id < 6:
-            #     continue
             product_id = metadata["product_id"]
-            # if product_id <= 17 and bank_id == 6:
-            #     continue
+
 
             print(f"\nProcessing search for bank_id={bank_id}, product_id={product_id}")
             print(f"Search query: {prompt[:100]}...")
@@ -169,7 +160,6 @@ def get_raw_data():
             else:
                 print(f"Response: {raw_response}")
 
-            # Обрабатываем результаты
             result = process_search_results(query, raw_response)
 
             if not result:
@@ -178,7 +168,6 @@ def get_raw_data():
                 )
                 continue
 
-            # Сохраняем в базу
             success = save_raw_data(result)
 
             if success:
@@ -198,7 +187,6 @@ def get_raw_data():
             traceback.print_exc()
             continue
 
-    # После завершения всех запросов запускаем обработку данных за сегодня
     if any_data_saved:
         print("\n" + "=" * 50)
         print("STARTING DATA PROCESSING FOR TODAY'S RAW DATA")
@@ -232,20 +220,13 @@ def get_raw_data():
     print("\nWeb search cron job completed!")
 
 
-# if __name__ == "__main__":
-#     get_raw_data()
-
-
 def main():
     """Основная функция для cron job"""
-    print(f"\n🚀 ЗАПУСК ЕЖЕДНЕВНОЙ ОБРАБОТКИ ДАННЫХ: {datetime.now()}")
-
     success = process_todays_data()
 
     if success:
-        print(f"\nОБРАБОТКА ЗАВЕРШЕНА УСПЕШНО: {datetime.now()}")
+        return
     else:
-        print(f"\nОБРАБОТКА ЗАВЕРШЕНА С ОШИБКАМИ: {datetime.now()}")
         exit(1)
 
 

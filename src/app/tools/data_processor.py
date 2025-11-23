@@ -16,7 +16,7 @@ from src.app.agents.web_search_agent.tools import (
 from src.app.domain.models import CriterionWithEmbedding
 from src.app.infra.llm.client import llm
 
-# Настройка логирования
+
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
@@ -161,7 +161,6 @@ class DataProcessor:
 ВАЖНО: Верните ТОЛЬКО валидный JSON в строго указанном формате без дополнительных комментариев или пояснений.
             """
 
-            # Пользовательский промпт с контекстом
             user_prompt = f"""
 БАНК: {bank_name}
 ПРОДУКТ: {product_name}
@@ -195,20 +194,18 @@ class DataProcessor:
                 HumanMessage(content=user_prompt),
             ]
 
-            # Получаем ответ от LLM
+      
             response = self.llm.invoke(messages)
             response_text = response.content.strip()
 
-            # Очищаем ответ от markdown и дополнительного текста
             json_match = re.search(r"```json\s*({.*?})\s*```", response_text, re.DOTALL)
             if json_match:
                 json_str = json_match.group(1)
             else:
-                # Удаляем все, кроме JSON
+            
                 json_str = re.sub(r"^[^{]*", "", response_text, flags=re.DOTALL)
                 json_str = re.sub(r"[^}]*$", "", json_str, flags=re.DOTALL)
 
-            # Парсим JSON
             try:
                 parsed_data = json.loads(json_str)
                 validation_result = CriteriaExtractionResult(**parsed_data)
@@ -269,16 +266,15 @@ class DataProcessor:
             response = self.llm.invoke(messages)
             response_text = response.content.strip()
 
-            # Очищаем ответ от markdown и дополнительного текста
+
             json_match = re.search(r"```json\s*({.*?})\s*```", response_text, re.DOTALL)
             if json_match:
                 json_str = json_match.group(1)
             else:
-                # Удаляем все, кроме JSON
+           
                 json_str = re.sub(r"^[^{]*", "", response_text, flags=re.DOTALL)
                 json_str = re.sub(r"[^}]*$", "", json_str, flags=re.DOTALL)
 
-            # Парсим JSON
             try:
                 parsed_data = json.loads(json_str)
                 validation_result = CriteriaExtractionResult(**parsed_data)
@@ -306,7 +302,7 @@ class DataProcessor:
                 record["bank_id"], record["product_id"]
             )
 
-            # Извлекаем критерии из текста
+         
             criteria = self.extract_criteria_from_text(
                 record["raw_data"], bank_name, product_name
             )
@@ -315,10 +311,10 @@ class DataProcessor:
 
             for criterion in criteria:
                 try:
-                    # Получаем эмбеддинг для критерия
+       
                     embedding = get_embedding(criterion.criterion)
 
-                    # Создаем объект для сохранения
+         
                     processed_criteria.append(
                         CriterionWithEmbedding(
                             bank_id=record["bank_id"],
@@ -358,12 +354,10 @@ class DataProcessor:
             )
 
             if criteria_list:
-                # Извлекаем только указанные критерии
                 criteria = self.extract_specific_criteria_from_text(
                     record["raw_data"], bank_name, product_name, criteria_list
                 )
             else:
-                # Извлекаем все возможные критерии
                 criteria = self.extract_criteria_from_text(
                     record["raw_data"], bank_name, product_name
                 )
@@ -399,7 +393,7 @@ class DataProcessor:
     def process_all_today_data(self) -> bool:
         """Основная функция обработки всех данных за сегодня"""
         try:
-            # Получаем сырые данные за сегодня
+       
             raw_data_records = self.get_today_raw_data()
 
             if not raw_data_records:
@@ -408,7 +402,7 @@ class DataProcessor:
 
             all_processed_criteria = []
 
-            # Обрабатываем каждую запись
+     
             for i, record in enumerate(raw_data_records, 1):
                 logger.info(
                     f"Processing record {i}/{len(raw_data_records)} (ID: {record['id']})"
@@ -420,7 +414,7 @@ class DataProcessor:
                 logger.warning("No criteria were extracted from any records")
                 return False
 
-            # Сохраняем все обработанные данные
+         
             success = save_processed_data(all_processed_criteria)
 
             if success:
@@ -451,7 +445,7 @@ class DataProcessor:
             all_processed_criteria = []
 
             with conn.cursor() as cursor:
-                # Строим запрос с фильтрацией
+            
                 query = """
                     SELECT id, bank_id, product_id, raw_data, source, ts
                     FROM bank_buffer
@@ -491,7 +485,7 @@ class DataProcessor:
 
                 logger.info(f"Found {len(records)} records for processing with filters")
 
-                # Обрабатываем каждую запись
+           
                 for i, record in enumerate(records, 1):
                     record_data = {
                         "id": record[0],
@@ -514,7 +508,7 @@ class DataProcessor:
                 logger.warning("No criteria were extracted from any filtered records")
                 return False
 
-            # Сохраняем обработанные данные
+    
             success = save_processed_data(all_processed_criteria)
 
             if success:

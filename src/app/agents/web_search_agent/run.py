@@ -12,29 +12,19 @@ load_dotenv()
 
 def process_todays_data():
     """Обрабатывает только сегодняшние сырые данные"""
-    print("\n" + "=" * 60)
-    print("НАЧАЛО ОБРАБОТКИ СЕГОДНЯШНИХ ДАННЫХ")
-    print("=" * 60)
 
     try:
         today_date = datetime.now(timezone.utc).date()
         print(f"Текущая дата (UTC): {today_date}")
 
-        # Создаем запрос для инструмента обработки
         tool_input = {
-            "bank_id": None,  # Все банки
-            "product_id": None,  # Все продукты
-            "criteria_list": None,  # Все критерии
-            "force_today": True,  # Только сегодняшние данные
+            "bank_id": None,
+            "product_id": None,
+            "criteria_list": None,
+            "force_today": True,
         }
 
-        print("Вызов инструмента обработки данных...")
         result = process_raw_data_for_criteria.invoke(tool_input)
-
-        print("\n" + "=" * 60)
-        print("РЕЗУЛЬТАТ ОБРАБОТКИ:")
-        print("=" * 60)
-        print(result)
 
         return True
 
@@ -63,4 +53,4 @@ def run_web_search_agent(messages):
 
 def run_data_processing_pipeline():
     """Запускает пайплайн обработки данных"""
-    return process_todays_data()  # Из нового cron.py
+    return process_todays_data()
