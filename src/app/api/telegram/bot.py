@@ -18,8 +18,18 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-bot = Bot(token=getenv("TELEGRAM_API_TOKEN"))
-dp = Dispatcher()
+telegram_token = getenv("TELEGRAM_API_TOKEN")
+
+if telegram_token:
+    bot = Bot(token=telegram_token)
+    dp = Dispatcher()
+else:
+    bot = None
+    dp = Dispatcher()
+    logger.warning(
+        "TELEGRAM_API_TOKEN is not set. Telegram bot is disabled; "
+        "web frontend/API can be tested without this token."
+    )
 
 
 async def send_long_message(chat_id: int, text: str):
@@ -53,6 +63,9 @@ async def handle_start(message: types.Message):
 
 @dp.message()
 async def handle_user_message(message: types.Message):
+    if bot is None:
+        await message.answer("Бот отключен: TELEGRAM_API_TOKEN не задан.")
+        return
     user_id = message.from_user.id
     user_text = message.text.strip()
 
@@ -87,6 +100,10 @@ async def handle_user_message(message: types.Message):
 
 
 async def main():
+    if bot is None:
+        logger.error("TELEGRAM_API_TOKEN не задан. Телеграм-бот не будет запущен.")
+        return
+
     logger.info("Бот запущен...")
     await dp.start_polling(bot)
 
