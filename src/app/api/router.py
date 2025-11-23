@@ -7,6 +7,10 @@ router = APIRouter()
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(data: ChatRequest):
-    #TODO: сделать точку входа в агента
-    response = run_agent(message=data.message)
-    return ChatResponse(response=response)
+    result = run_agent(data.message)
+
+    return ChatResponse(
+        text=result["text"],
+        send_csv=result.get("csv", False),
+        send_png=result.get("png", False)
+    )

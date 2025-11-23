@@ -1,8 +1,5 @@
-"""
-Модели данных для API.
-"""
-
 from pydantic import BaseModel
+from typing import Optional
 
 
 class ChatRequest(BaseModel):
@@ -10,4 +7,6 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    response: str
+    text: str
+    send_csv: bool
+    send_png: bool
