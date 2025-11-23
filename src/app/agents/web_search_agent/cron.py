@@ -7,47 +7,13 @@ from typing import Any, Dict, List, Union
 from pydantic import ValidationError
 
 from src.app.tools.data_processing_tools import process_raw_data_for_criteria
-from src.app.agents.web_search_agent.run import run_web_search_agent
+from src.app.agents.web_search_agent.run import process_todays_data, run_web_search_agent
 from src.app.agents.web_search_agent.tools import (
     get_bank_and_products,
     save_raw_data,
 )
 from src.app.domain.models import WebSearchItem, WebSearchResult
 from src.app.tools.data_processor import DataProcessor  # Импортируем обработчик данных
-
-
-def process_todays_data():
-    """Обрабатывает только сегодняшние сырые данные"""
-    print("\n" + "=" * 60)
-    print("НАЧАЛО ОБРАБОТКИ СЕГОДНЯШНИХ ДАННЫХ")
-    print("=" * 60)
-
-    try:
-        today_date = datetime.now(timezone.utc).date()
-        print(f"Текущая дата (UTC): {today_date}")
-
-        # Создаем запрос для инструмента обработки
-        tool_input = {
-            "bank_id": None,  # Все банки
-            "product_id": None,  # Все продукты
-            "criteria_list": None,  # Все критерии
-            "force_today": True,  # Только сегодняшние данные
-        }
-
-        print("Вызов инструмента обработки данных...")
-        result = process_raw_data_for_criteria.invoke(tool_input)
-
-        print("\n" + "=" * 60)
-        print("РЕЗУЛЬТАТ ОБРАБОТКИ:")
-        print("=" * 60)
-        print(result)
-
-        return True
-
-    except Exception as e:
-        print(f"\nКРИТИЧЕСКАЯ ОШИБКА ПРИ ОБРАБОТКЕ ДАННЫХ: {str(e)}")
-        traceback.print_exc()
-        return False
 
 
 def normalize_agent_response(raw_response: Any) -> List[Dict[str, str]]:
@@ -275,9 +241,9 @@ def main():
     success = process_todays_data()
 
     if success:
-        print(f"\n✅ ОБРАБОТКА ЗАВЕРШЕНА УСПЕШНО: {datetime.now()}")
+        print(f"\nОБРАБОТКА ЗАВЕРШЕНА УСПЕШНО: {datetime.now()}")
     else:
-        print(f"\n❌ ОБРАБОТКА ЗАВЕРШЕНА С ОШИБКАМИ: {datetime.now()}")
+        print(f"\nОБРАБОТКА ЗАВЕРШЕНА С ОШИБКАМИ: {datetime.now()}")
         exit(1)
 
 
