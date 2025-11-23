@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import json
 import logging
 from os import getenv
 
@@ -7,7 +8,10 @@ from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import FSInputFile, BufferedInputFile
 from aiogram.filters import Command
+from aiogram.filters import CommandStart
 import aiohttp
+
+from src.app.agents.user_requests_agent.run import run_agent
 
 load_dotenv()
 
@@ -41,46 +45,94 @@ async def send_long_message(chat_id: int, text: str):
             await bot.send_message(chat_id=chat_id, text=part)
             await asyncio.sleep(0.1)
 
+@dp.message(CommandStart())
+async def handle_start(message: types.Message):
+    """Обработка команды /start."""
+    await message.answer("Привет! Введите ваш запрос.")
 
-async def send_to_api(user_message: str, user_id: int):
-    payload = {"message": user_message}
-    headers = {"Content-Type": "application/json"}
 
+@dp.message()
+async def handle_user_message(message: types.Message):
+    user_id = message.from_user.id
+    user_text = message.text.strip()
+
+    await message.answer("Обрабатываю ваше сообщение...")
+
+    result = run_agent(user_text)
+    result = result["messages"][-1].content
+    
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(getenv("TARGET_API_URL"), json=payload, headers=headers) as response:
+        result = json.loads(result)
+        text = result['text']
+        csv = result.get("csv")
+        png = result.get("png")
+    except json.JSONDecodeError:
+        text = result
+        csv = None
+        png = None
+    # Отправляем текст
+    await send_long_message(user_id, text)
 
-                if response.status != 200:
-                    await bot.send_message(user_id, f"Ошибка API: {response.status}")
-                    return
+    # Отправляем CSV если нужно
+    if csv:
+        csv_path = "src/app/resourses/report.csv"
+        csv_file = FSInputFile(csv_path)
+        await bot.send_document(user_id, csv_file, caption="CSV-файл")
 
-                api_resp = await response.json()
+    # Отправляем PNG если нужно
+    if png:
+        png_path = "src/app/resourses/plot.png"
+        png_file = FSInputFile(png_path)
+        await bot.send_photo(user_id, png_file, caption="Изображение")
 
-                text = api_resp["text"]
-                send_csv = api_resp["send_csv"]
-                send_png = api_resp["send_png"]
 
-                # ---- отправляем текст ----
-                await send_long_message(user_id, text)
+async def main():
+    logger.info("Бот запущен...")
+    await dp.start_polling(bot)
 
-                # ---- CSV ----
-                if send_csv:
-                    try:
-                        csv_file = FSInputFile("files/report.csv")
-                        await bot.send_document(user_id, csv_file, caption="CSV-файл")
-                    except Exception as e:
-                        await bot.send_message(user_id, f"Ошибка отправки CSV: {e}")
 
-                # ---- PNG ----
-                if send_png:
-                    try:
-                        png_file = FSInputFile("files/image.png")
-                        await bot.send_photo(user_id, png_file, caption="Изображение")
-                    except Exception as e:
-                        await bot.send_message(user_id, f"Ошибка отправки PNG: {e}")
+if __name__ == "__main__":
+    asyncio.run(main())
 
-    except Exception as e:
-        await bot.send_message(user_id, f"Ошибка API: {e}")
+# async def send_to_api(user_message: str, user_id: int):
+#     payload = {"message": user_message}
+#     headers = {"Content-Type": "application/json"}
+
+#     try:
+#         async with aiohttp.ClientSession() as session:
+#             async with session.post(getenv("TARGET_API_URL"), json=payload, headers=headers) as response:
+
+#                 if response.status != 200:
+#                     await bot.send_message(user_id, f"Ошибка API: {response.status}")
+#                     return
+
+#                 api_resp = await response.json()
+
+#                 text = api_resp["text"]
+#                 send_csv = api_resp["send_csv"]
+#                 send_png = api_resp["send_png"]
+
+#                 # ---- отправляем текст ----
+#                 await send_long_message(user_id, text)
+
+#                 # ---- CSV ----
+#                 if send_csv:
+#                     try:
+#                         csv_file = FSInputFile("files/report.csv")
+#                         await bot.send_document(user_id, csv_file, caption="CSV-файл")
+#                     except Exception as e:
+#                         await bot.send_message(user_id, f"Ошибка отправки CSV: {e}")
+
+#                 # ---- PNG ----
+#                 if send_png:
+#                     try:
+#                         png_file = FSInputFile("files/image.png")
+#                         await bot.send_photo(user_id, png_file, caption="Изображение")
+#                     except Exception as e:
+#                         await bot.send_message(user_id, f"Ошибка отправки PNG: {e}")
+
+#     except Exception as e:
+#         await bot.send_message(user_id, f"Ошибка API: {e}")
 
 
 # # ====== НОВОЕ: отправка CSV-файла ======
@@ -125,20 +177,3 @@ async def send_to_api(user_message: str, user_id: int):
 
 
 # # ====== основной обработчик текстовых сообщений (как у тебя было) ======
-@dp.message()
-async def handle_user_message(message: types.Message):
-    """Обработка сообщений от пользователя."""
-    user_id = message.from_user.id
-    user_input = message.text.strip()
-
-    await message.answer("Обрабатываю ваше сообщение...")
-    asyncio.create_task(send_to_api(user_input, user_id))
-
-
-async def main():
-    logger.info("Бот запущен...")
-    await dp.start_polling(bot)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())

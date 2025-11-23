@@ -3,8 +3,8 @@ from fuzzywuzzy import fuzz
 import psycopg2
 from os import getenv
 from typing import Optional, List, Dict, Tuple, Any
-from app.infra.llm.client import llm
-from app.infra.embedder.get_embedding import get_embedding  
+from src.app.infra.llm.client import llm
+from src.app.infra.embedder.get_embedding import get_embedding  
 from itertools import product
 from langchain_core.tools import tool
 
