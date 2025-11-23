@@ -1,13 +1,10 @@
-import json
 import logging
-import os
-import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, SystemMessage
-from pydantic import BaseModel, Field, ValidationError, validator
+from pydantic import BaseModel, Field, validator
 from src.app.agents.web_search_agent.tools import get_connection, get_embedding, save_processed_data
 
 from src.app.domain.models import CriterionWithEmbedding
@@ -48,6 +45,9 @@ class CriteriaExtractionResult(BaseModel):
 class DataProcessor:
     def __init__(self):
         self.llm = llm
+        self.structured_llm = self.llm.with_structured_output(
+            CriteriaExtractionResult
+        )
         self.today_date = datetime.now(timezone.utc).date()
 
     def get_today_raw_data(self) -> List[Dict[str, Any]]:
@@ -186,37 +186,16 @@ class DataProcessor:
 - Если в тексте нет измеримых параметров, верните пустой массив criteria
             """
 
-            # Создаем промпт
             messages = [
                 SystemMessage(content=system_prompt),
                 HumanMessage(content=user_prompt),
             ]
 
-            # Получаем ответ от LLM
-            response = self.llm.invoke(messages)
-            response_text = response.content.strip()
-
-            # Очищаем ответ от markdown и дополнительного текста
-            json_match = re.search(r"```json\s*({.*?})\s*```", response_text, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(1)
-            else:
-                # Удаляем все, кроме JSON
-                json_str = re.sub(r"^[^{]*", "", response_text, flags=re.DOTALL)
-                json_str = re.sub(r"[^}]*$", "", json_str, flags=re.DOTALL)
-
-            # Парсим JSON
-            try:
-                parsed_data = json.loads(json_str)
-                validation_result = CriteriaExtractionResult(**parsed_data)
-                logger.info(
-                    f"Successfully extracted {len(validation_result.criteria)} criteria"
-                )
-                return validation_result.criteria
-            except (json.JSONDecodeError, ValidationError) as e:
-                logger.error(f"Error parsing LLM response: {str(e)}")
-                logger.error(f"Raw response: {response_text}")
-                return []
+            response = self.structured_llm.invoke(messages)
+            logger.info(
+                f"Successfully extracted {len(response.criteria)} criteria"
+            )
+            return response.criteria
 
         except Exception as e:
             logger.error(f"Error extracting criteria: {str(e)}")
@@ -263,32 +242,11 @@ class DataProcessor:
                 HumanMessage(content=user_prompt),
             ]
 
-            response = self.llm.invoke(messages)
-            response_text = response.content.strip()
-
-            # Очищаем ответ от markdown и дополнительного текста
-            json_match = re.search(r"```json\s*({.*?})\s*```", response_text, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(1)
-            else:
-                # Удаляем все, кроме JSON
-                json_str = re.sub(r"^[^{]*", "", response_text, flags=re.DOTALL)
-                json_str = re.sub(r"[^}]*$", "", json_str, flags=re.DOTALL)
-
-            # Парсим JSON
-            try:
-                parsed_data = json.loads(json_str)
-                validation_result = CriteriaExtractionResult(**parsed_data)
-                logger.info(
-                    f"Successfully extracted {len(validation_result.criteria)} specific criteria"
-                )
-                return validation_result.criteria
-            except (json.JSONDecodeError, ValidationError) as e:
-                logger.error(
-                    f"Error parsing LLM response for specific criteria: {str(e)}"
-                )
-                logger.error(f"Raw response: {response_text}")
-                return []
+            response = self.structured_llm.invoke(messages)
+            logger.info(
+                f"Successfully extracted {len(response.criteria)} specific criteria"
+            )
+            return response.criteria
 
         except Exception as e:
             logger.error(f"Error extracting specific criteria: {str(e)}")
