@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from langchain_core.tools import tool
 from src.app.agents.web_search_agent.tools import get_connection

@@ -11,7 +11,6 @@
 from datetime import datetime
 
 from langchain.agents import create_agent
-from loguru import logger
 
 from src.app.infra.llm.client import llm
 from src.app.tools.data_processing_tools import (

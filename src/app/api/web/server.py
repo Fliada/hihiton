@@ -95,14 +95,18 @@ def _build_png_payload() -> Optional[PNGPayload]:
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
     try:
-        raw_result = run_agent(request.message, thread_id=request.session_id or "web-session")
+        raw_result = run_agent(
+            request.message, thread_id=request.session_id or "web-session"
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Agent error: {exc}") from exc
 
     try:
         assistant_message = raw_result["messages"][-1].content
     except (KeyError, IndexError) as exc:
-        raise HTTPException(status_code=500, detail="Unexpected agent response format") from exc
+        raise HTTPException(
+            status_code=500, detail="Unexpected agent response format"
+        ) from exc
 
     text_payload = _extract_agent_text(assistant_message)
 

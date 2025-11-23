@@ -5,8 +5,10 @@ from src.app.tools.data_processing_tools import process_raw_data_for_criteria
 from src.app.agents.web_search_agent.agent import web_search_agent
 
 from langfuse.langchain import CallbackHandler
+
 langfuse_handler = CallbackHandler()
 load_dotenv()
+
 
 def process_todays_data():
     """Обрабатывает только сегодняшние сырые данные"""
@@ -41,10 +43,12 @@ def process_todays_data():
         traceback.print_exc()
         return False
 
+
 config = {
     "callbacks": [langfuse_handler],
     "configurable": {"thread_id": "e90165add92568e538fad7255ea203e3f2a677c6"},
 }
+
 
 def run_web_search_agent(messages):
     result = web_search_agent.invoke(
@@ -55,6 +59,7 @@ def run_web_search_agent(messages):
     )
     response = result["messages"][-1].content if result["messages"] else "Нет ответа"
     return response
+
 
 def run_data_processing_pipeline():
     """Запускает пайплайн обработки данных"""

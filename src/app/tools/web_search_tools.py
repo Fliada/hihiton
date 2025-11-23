@@ -3,10 +3,9 @@ import re
 import sys
 import time
 import traceback
-import urllib.parse
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import List
 
 import httpx
 from bs4 import BeautifulSoup
@@ -116,7 +115,7 @@ class SerperSearcher:
                 file=sys.stderr,
             )
             return []
-        except Exception as e:
+        except Exception:
             traceback.print_exc(file=sys.stderr)
             return []
 

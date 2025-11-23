@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
+
 def get_embedding(text: str) -> List[float]:
     """
     Получает векторное представление (embedding) для заданного текста.
@@ -30,11 +31,7 @@ def get_embedding(text: str) -> List[float]:
     embedder_url = getenv("EMBEDDER_URL")
 
     try:
-        response = requests.post(
-            embedder_url,
-            json={"text": text},
-            timeout=30
-        )
+        response = requests.post(embedder_url, json={"text": text}, timeout=30)
         response.raise_for_status()
 
         data = response.json()

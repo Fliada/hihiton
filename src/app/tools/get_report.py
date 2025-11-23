@@ -4,7 +4,7 @@ import psycopg2
 from os import getenv
 from typing import Optional, List, Dict, Tuple, Any
 from app.infra.llm.client import llm
-from app.infra.embedder.get_embedding import get_embedding  
+from app.infra.embedder.get_embedding import get_embedding
 from itertools import product
 from langchain_core.tools import tool
 
@@ -17,7 +17,8 @@ class UserRequest(BaseModel):
     criteria: Optional[str] = Field(
         description="Критерии сравнения услуг и банков", default=None
     )
-   
+
+
 class ResultRequest(BaseModel):
     table: List[str] = Field(description="Данные csv таблицы")
     summary: List[str] = Field(description="Вывод")
@@ -138,13 +139,14 @@ def validate_result(query_entities: List[str], bd_entities: List[int]) -> bool:
     print(len(query_entities), len(bd_entities))
     return len(query_entities) == len(bd_entities)
 
+
 def get_criterion_data_for_all(
-    bank_product_embeddings: List[Tuple[int, int, List[float]]]
+    bank_product_embeddings: List[Tuple[int, int, List[float]]],
 ) -> List[Tuple[Any, ...]]:
     """
     Получает наиболее релевантную запись из bank_analysis
     для каждой тройки (bank_id, product_id, embedding).
-    
+
     Args:
         bank_product_embeddings: список вида [(bank_id, product_id, embedding), ...]
     """
@@ -166,7 +168,7 @@ def get_criterion_data_for_all(
             for bank_id, product_id, emb in bank_product_embeddings:
                 emb_str = "[" + ",".join(str(x) for x in emb) + "]"
                 values_parts.append(f"({bank_id}, {product_id}, '{emb_str}'::vector)")
-            
+
             values_clause = ", ".join(values_parts)
 
             # query = f"""
@@ -261,38 +263,41 @@ def get_report(
             print(criteria)
             print(get_criterion_data_for_all(bank_product_embeddings))
             results.append(get_criterion_data_for_all(bank_product_embeddings))
-        print("#"*50)
-        import pandas as pd    
+        print("#" * 50)
+        import pandas as pd
+
         print(results)
         all_rows = []
         for criterion_group in results:
             for row in criterion_group:
                 bank, produc, metric, value, url, data = row
                 print(data)
-                all_rows.append({
-                    'Банк': bank,
-                    'Тип продукта': produc,
-                    'Показатель': metric,
-                    'Значение': value
-                    # URL можно сохранить при необходимости, но для сводки он не нужен
-                })
+                all_rows.append(
+                    {
+                        "Банк": bank,
+                        "Тип продукта": produc,
+                        "Показатель": metric,
+                        "Значение": value,
+                        # URL можно сохранить при необходимости, но для сводки он не нужен
+                    }
+                )
 
         # Создаём DataFrame
         df = pd.DataFrame(all_rows)
-        df['Критерий'] = df['Тип продукта'] + ': ' + df['Показатель']
+        df["Критерий"] = df["Тип продукта"] + ": " + df["Показатель"]
 
         # Используем pivot_table с aggfunc — например, первое значение
         pivot = df.pivot_table(
-            index='Банк',
-            columns='Критерий',
-            values='Значение',
-            aggfunc='first',          # или ','.join, если хотите объединить все значения
-            fill_value=''             # заменить NaN на пустую строку
+            index="Банк",
+            columns="Критерий",
+            values="Значение",
+            aggfunc="first",  # или ','.join, если хотите объединить все значения
+            fill_value="",  # заменить NaN на пустую строку
         ).reset_index()
         print(df)
         pivot.columns.name = None
 
-        pivot.to_csv('итоговая_таблица.csv', index=False, encoding='utf-8')
+        pivot.to_csv("итоговая_таблица.csv", index=False, encoding="utf-8")
         print(pivot)
 
         print(pivot)
@@ -300,6 +305,6 @@ def get_report(
         structured_llm = llm.with_structured_output(ResultRequest)
         result: ResultRequest = structured_llm.invoke(prompt)
         print(result)
-        
+
     except Exception as e:
         print(f"❌ Ошибка: {e}")

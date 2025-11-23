@@ -4,10 +4,9 @@ from langfuse.langchain import CallbackHandler
 from langgraph.checkpoint.memory import MemorySaver
 
 from src.app.tools.user_requests_parse import get_user_request_data_from_db
-# from app.tools.get_report import get_report
+
 from src.app.infra.llm.client import llm
 
-# tools = [get_user_request_data_from_db, get_report]
 
 tools = [get_user_request_data_from_db]
 

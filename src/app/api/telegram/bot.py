@@ -1,15 +1,12 @@
 import asyncio
-import base64
 import json
 import logging
 from os import getenv
 
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import FSInputFile, BufferedInputFile
-from aiogram.filters import Command
+from aiogram.types import FSInputFile
 from aiogram.filters import CommandStart
-import aiohttp
 
 from src.app.agents.user_requests_agent.run import run_agent
 
@@ -45,6 +42,7 @@ async def send_long_message(chat_id: int, text: str):
             await bot.send_message(chat_id=chat_id, text=part)
             await asyncio.sleep(0.1)
 
+
 @dp.message(CommandStart())
 async def handle_start(message: types.Message):
     """Обработка команды /start."""
@@ -60,10 +58,10 @@ async def handle_user_message(message: types.Message):
 
     result = run_agent(user_text)
     result = result["messages"][-1].content
-    
+
     try:
         result = json.loads(result)
-        text = result['text']
+        text = result["text"]
         csv = result.get("csv")
         png = result.get("png")
     except json.JSONDecodeError:

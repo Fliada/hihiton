@@ -1,18 +1,267 @@
 import datetime
-import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from collections import defaultdict
-from datetime import timezone
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 import re
-from collections import defaultdict
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-data = [[('Сбер', 'накопительные счета', 'процентная ставка', '15 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 22, 19, 35, 29, 956606, tzinfo=datetime.timezone.utc)), ('ОТП Банк', 'накопительные счета', 'процентная ставка', '18 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 22, 21, 14, 0, 318237, tzinfo=datetime.timezone.utc))], [('Сбер', 'накопительные счета', 'процентная ставка', '9 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 23, 0, 27, 23, 313438, tzinfo=datetime.timezone.utc)), ('ОТП Банк', 'накопительные счета', 'процентная ставка', '8 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 23, 0, 27, 14, 605646, tzinfo=datetime.timezone.utc))]]
-data = [[('Сбер', 'накопительные счета', 'процентная ставка', '15 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 22, 19, 35, 29, 956606, tzinfo=datetime.timezone.utc)), ('Сбер', 'накопительные счета', 'кэшбек', '9 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 23, 0, 27, 23, 313438, tzinfo=datetime.timezone.utc)), ('Сбер', 'накопительные счета', 'кэшбек', '19 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 23, 1, 18, 12, 16337, tzinfo=datetime.timezone.utc)), ('ОТП Банк', 'накопительные счета', 'процентная ставка', '18 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 22, 21, 14, 0, 318237, tzinfo=datetime.timezone.utc)), ('ОТП Банк', 'накопительные счета', 'кэшбек', '8 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 23, 0, 27, 14, 605646, tzinfo=datetime.timezone.utc))], [('Сбер', 'накопительные счета', 'кэшбек', '9 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 23, 0, 27, 23, 313438, tzinfo=datetime.timezone.utc)), ('Сбер', 'накопительные счета', 'кэшбек', '19 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 23, 1, 18, 12, 16337, tzinfo=datetime.timezone.utc)), ('Сбер', 'накопительные счета', 'процентная ставка', '15 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 22, 19, 35, 29, 956606, tzinfo=datetime.timezone.utc)), ('ОТП Банк', 'накопительные счета', 'кэшбек', '8 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 23, 0, 27, 14, 605646, tzinfo=datetime.timezone.utc)), ('ОТП Банк', 'накопительные счета', 'процентная ставка', '18 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 22, 21, 14, 0, 318237, tzinfo=datetime.timezone.utc))]]
-data = [[('Альфа-Банк', 'накопительные счета', 'ограничения на пополнение накопительного счета', 'нет ограничений', 'https://alfabank.ru/make-money/savings-account/', datetime.datetime(2025, 11, 23, 1, 13, 6, 982580, tzinfo=datetime.timezone.utc)), ('Альфа-Банк', 'накопительные счета', 'минимальная сумма для открытия накопительного счета', '1 рубль', 'https://alfabank.ru/make-money/savings-account/', datetime.datetime(2025, 11, 23, 1, 13, 6, 982580, tzinfo=datetime.timezone.utc)), ('Альфа-Банк', 'накопительные счета', 'минимальная сумма для открытия накопительного счета', '1 рубль', 'https://alfabank.ru/make-money/', datetime.datetime(2025, 11, 23, 1, 8, 31, 391326, tzinfo=datetime.timezone.utc)), ('Альфа-Банк', 'накопительные счета', 'наличие комиссии за обслуживание накопительного счета', 'бесплатно', 'https://alfabank.ru/make-money/savings-account/', datetime.datetime(2025, 11, 23, 1, 13, 6, 982580, tzinfo=datetime.timezone.utc)), ('Альфа-Банк', 'накопительные счета', 'частота начисления процентов по накопительному счету', 'ежедневно', 'https://alfabank.ru/make-money/savings-account/', datetime.datetime(2025, 11, 23, 1, 13, 6, 982580, tzinfo=datetime.timezone.utc))], [ ('Альфа-Банк', 'накопительные счета', 'максимальная процентная ставка по накопительному счету', '17% годовых', 'https://alfabank.ru/make-money/savings-account/', datetime.datetime(2025, 11, 23, 1, 13, 6, 982580, tzinfo=datetime.timezone.utc)), ('Альфа-Банк', 'накопительные счета', 'максимальная процентная ставка по накопительному счёту', '17% годовых', 'https://alfabank.ru/help/articles/deposits/chto-takoe-nakopitelnyj-schet/', datetime.datetime(2025, 11, 23, 1, 13, 6, 982580, tzinfo=datetime.timezone.utc)), ('Альфа-Банк', 'накопительные счета', 'максимальная процентная ставка по накопительному счёту', '17% годовых', 'https://alfabank.ru/make-money/savings-account/', datetime.datetime(2025, 11, 23, 1, 8, 31, 391326, tzinfo=datetime.timezone.utc)), ('Альфа-Банк', 'накопительные счета', 'максимальная процентная ставка по накопительному счету по ежедневному остатку', '17% годовых', 'https://alfabank.ru/make-money/', datetime.datetime(2025, 11, 23, 1, 8, 31, 391326, tzinfo=datetime.timezone.utc)), ('Альфа-Банк', 'накопительные счета', 'минимальная сумма для открытия накопительного счета', '1 рубль', 'https://alfabank.ru/make-money/', datetime.datetime(2025, 11, 23, 1, 8, 31, 391326, tzinfo=datetime.timezone.utc))]]
+
+data = [
+    [
+        (
+            "Сбер",
+            "накопительные счета",
+            "процентная ставка",
+            "15 процентов",
+            "https://www.banki.ru",
+            datetime.datetime(
+                2025, 11, 22, 19, 35, 29, 956606, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "ОТП Банк",
+            "накопительные счета",
+            "процентная ставка",
+            "18 процентов",
+            "https://www.banki.ru",
+            datetime.datetime(
+                2025, 11, 22, 21, 14, 0, 318237, tzinfo=datetime.timezone.utc
+            ),
+        ),
+    ],
+    [
+        (
+            "Сбер",
+            "накопительные счета",
+            "процентная ставка",
+            "9 процентов",
+            "https://www.banki.ru",
+            datetime.datetime(
+                2025, 11, 23, 0, 27, 23, 313438, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "ОТП Банк",
+            "накопительные счета",
+            "процентная ставка",
+            "8 процентов",
+            "https://www.banki.ru",
+            datetime.datetime(
+                2025, 11, 23, 0, 27, 14, 605646, tzinfo=datetime.timezone.utc
+            ),
+        ),
+    ],
+]
+data = [
+    [
+        (
+            "Сбер",
+            "накопительные счета",
+            "процентная ставка",
+            "15 процентов",
+            "https://www.banki.ru",
+            datetime.datetime(
+                2025, 11, 22, 19, 35, 29, 956606, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "Сбер",
+            "накопительные счета",
+            "кэшбек",
+            "9 процентов",
+            "https://www.banki.ru",
+            datetime.datetime(
+                2025, 11, 23, 0, 27, 23, 313438, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "Сбер",
+            "накопительные счета",
+            "кэшбек",
+            "19 процентов",
+            "https://www.banki.ru",
+            datetime.datetime(
+                2025, 11, 23, 1, 18, 12, 16337, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "ОТП Банк",
+            "накопительные счета",
+            "процентная ставка",
+            "18 процентов",
+            "https://www.banki.ru",
+            datetime.datetime(
+                2025, 11, 22, 21, 14, 0, 318237, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "ОТП Банк",
+            "накопительные счета",
+            "кэшбек",
+            "8 процентов",
+            "https://www.banki.ru",
+            datetime.datetime(
+                2025, 11, 23, 0, 27, 14, 605646, tzinfo=datetime.timezone.utc
+            ),
+        ),
+    ],
+    [
+        (
+            "Сбер",
+            "накопительные счета",
+            "кэшбек",
+            "9 процентов",
+            "https://www.banki.ru",
+            datetime.datetime(
+                2025, 11, 23, 0, 27, 23, 313438, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "Сбер",
+            "накопительные счета",
+            "кэшбек",
+            "19 процентов",
+            "https://www.banki.ru",
+            datetime.datetime(
+                2025, 11, 23, 1, 18, 12, 16337, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "Сбер",
+            "накопительные счета",
+            "процентная ставка",
+            "15 процентов",
+            "https://www.banki.ru",
+            datetime.datetime(
+                2025, 11, 22, 19, 35, 29, 956606, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "ОТП Банк",
+            "накопительные счета",
+            "кэшбек",
+            "8 процентов",
+            "https://www.banki.ru",
+            datetime.datetime(
+                2025, 11, 23, 0, 27, 14, 605646, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "ОТП Банк",
+            "накопительные счета",
+            "процентная ставка",
+            "18 процентов",
+            "https://www.banki.ru",
+            datetime.datetime(
+                2025, 11, 22, 21, 14, 0, 318237, tzinfo=datetime.timezone.utc
+            ),
+        ),
+    ],
+]
+data = [
+    [
+        (
+            "Альфа-Банк",
+            "накопительные счета",
+            "ограничения на пополнение накопительного счета",
+            "нет ограничений",
+            "https://alfabank.ru/make-money/savings-account/",
+            datetime.datetime(
+                2025, 11, 23, 1, 13, 6, 982580, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "Альфа-Банк",
+            "накопительные счета",
+            "минимальная сумма для открытия накопительного счета",
+            "1 рубль",
+            "https://alfabank.ru/make-money/savings-account/",
+            datetime.datetime(
+                2025, 11, 23, 1, 13, 6, 982580, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "Альфа-Банк",
+            "накопительные счета",
+            "минимальная сумма для открытия накопительного счета",
+            "1 рубль",
+            "https://alfabank.ru/make-money/",
+            datetime.datetime(
+                2025, 11, 23, 1, 8, 31, 391326, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "Альфа-Банк",
+            "накопительные счета",
+            "наличие комиссии за обслуживание накопительного счета",
+            "бесплатно",
+            "https://alfabank.ru/make-money/savings-account/",
+            datetime.datetime(
+                2025, 11, 23, 1, 13, 6, 982580, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "Альфа-Банк",
+            "накопительные счета",
+            "частота начисления процентов по накопительному счету",
+            "ежедневно",
+            "https://alfabank.ru/make-money/savings-account/",
+            datetime.datetime(
+                2025, 11, 23, 1, 13, 6, 982580, tzinfo=datetime.timezone.utc
+            ),
+        ),
+    ],
+    [
+        (
+            "Альфа-Банк",
+            "накопительные счета",
+            "максимальная процентная ставка по накопительному счету",
+            "17% годовых",
+            "https://alfabank.ru/make-money/savings-account/",
+            datetime.datetime(
+                2025, 11, 23, 1, 13, 6, 982580, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "Альфа-Банк",
+            "накопительные счета",
+            "максимальная процентная ставка по накопительному счёту",
+            "17% годовых",
+            "https://alfabank.ru/help/articles/deposits/chto-takoe-nakopitelnyj-schet/",
+            datetime.datetime(
+                2025, 11, 23, 1, 13, 6, 982580, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "Альфа-Банк",
+            "накопительные счета",
+            "максимальная процентная ставка по накопительному счёту",
+            "17% годовых",
+            "https://alfabank.ru/make-money/savings-account/",
+            datetime.datetime(
+                2025, 11, 23, 1, 8, 31, 391326, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "Альфа-Банк",
+            "накопительные счета",
+            "максимальная процентная ставка по накопительному счету по ежедневному остатку",
+            "17% годовых",
+            "https://alfabank.ru/make-money/",
+            datetime.datetime(
+                2025, 11, 23, 1, 8, 31, 391326, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "Альфа-Банк",
+            "накопительные счета",
+            "минимальная сумма для открытия накопительного счета",
+            "1 рубль",
+            "https://alfabank.ru/make-money/",
+            datetime.datetime(
+                2025, 11, 23, 1, 8, 31, 391326, tzinfo=datetime.timezone.utc
+            ),
+        ),
+    ],
+]
 # === 1. Объединяем все записи из всех подсписков ===
 all_records = [record for sublist in data for record in sublist]
 if not all_records:
@@ -32,10 +281,12 @@ for record in all_records:
 # === 3. Подготовка временных рядов ===
 bank_series = {}
 
+
 def extract_number(value_str):
     """Извлекает первое число с плавающей точкой из строки. Возвращает float или None."""
-    match = re.search(r'[-+]?\d*\.?\d+', value_str)
+    match = re.search(r"[-+]?\d*\.?\d+", value_str)
     return float(match.group()) if match else None
+
 
 for bank, records in grouped.items():
     series = []
@@ -57,31 +308,30 @@ plt.figure(figsize=(12, 6))
 
 for bank, series in bank_series.items():
     dates, values = zip(*series)
-    plt.plot(dates, values, marker='o', linewidth=2, markersize=6, label=bank)
+    plt.plot(dates, values, marker="o", linewidth=2, markersize=6, label=bank)
 
 # Динамическое оформление — без хардкода!
 plt.title(common_title, fontsize=14)
-plt.xlabel("Дата", fontsize=12)          # ← единственные "хардкодные" слова
-plt.ylabel(common_ylabel, fontsize=12)   # ← всё остальное — из данных
-plt.grid(True, linestyle='--', alpha=0.6)
+plt.xlabel("Дата", fontsize=12)  # ← единственные "хардкодные" слова
+plt.ylabel(common_ylabel, fontsize=12)  # ← всё остальное — из данных
+plt.grid(True, linestyle="--", alpha=0.6)
 plt.legend(title="Банки")
 
 # Форматирование оси X
-plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%m-%d %H:%M'))
+plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%m-%d %H:%M"))
 plt.gca().xaxis.set_major_locator(mdates.HourLocator(interval=6))
 plt.gcf().autofmt_xdate()
 
 # Сохранение
-output_filename = f"{product_type.replace(' ', '_')}_{metric_name.replace(' ', '_')}.png"
+output_filename = (
+    f"{product_type.replace(' ', '_')}_{metric_name.replace(' ', '_')}.png"
+)
 plt.tight_layout()
 plt.savefig(r"app\resourses\plot.png", dpi=150)
 plt.close()
 
 
 print(f"✅ График сохранён как '{output_filename}'")
-
-
-
 
 
 # # Извлекаем (значение, дата)

@@ -1,14 +1,17 @@
 import json
 import logging
-import os
 import re
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field, ValidationError, validator
-from src.app.agents.web_search_agent.tools import get_connection, get_embedding, save_processed_data
+from src.app.agents.web_search_agent.tools import (
+    get_connection,
+    get_embedding,
+    save_processed_data,
+)
 
 from src.app.domain.models import CriterionWithEmbedding
 from src.app.infra.llm.client import llm

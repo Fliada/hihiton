@@ -1,10 +1,8 @@
-import json
 import os
-import re
 from datetime import datetime
 from functools import lru_cache
 from os import getenv
-from typing import Any, Dict, List
+from typing import Dict, List
 from urllib.parse import urljoin
 
 import httpx
@@ -149,7 +147,10 @@ def get_embedding(text: str) -> List[float]:
     try:
         with httpx.Client(timeout=30.0) as client:
             response = client.post(
-                urljoin(embedding_url, "/dialog/nlp/embedding/paraphrase-multilingual-MiniLM-L12-v2"),
+                urljoin(
+                    embedding_url,
+                    "/dialog/nlp/embedding/paraphrase-multilingual-MiniLM-L12-v2",
+                ),
                 json={"text": text},
                 headers={"Content-Type": "application/json"},
             )

@@ -1,13 +1,15 @@
 import json
 import re
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Dict, List, Union
 
 from pydantic import ValidationError
 
-from src.app.tools.data_processing_tools import process_raw_data_for_criteria
-from src.app.agents.web_search_agent.run import process_todays_data, run_web_search_agent
+from src.app.agents.web_search_agent.run import (
+    process_todays_data,
+    run_web_search_agent,
+)
 from src.app.agents.web_search_agent.tools import (
     get_bank_and_products,
     save_raw_data,

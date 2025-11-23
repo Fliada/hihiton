@@ -4,7 +4,7 @@ import psycopg2
 from os import getenv
 from typing import Optional, List, Dict, Tuple, Any
 from src.app.infra.llm.client import llm
-from src.app.infra.embedder.get_embedding import get_embedding  
+from src.app.infra.embedder.get_embedding import get_embedding
 from itertools import product
 from langchain_core.tools import tool
 
@@ -17,7 +17,8 @@ class UserRequest(BaseModel):
     criteria: Optional[str] = Field(
         description="Критерии сравнения услуг и банков", default=None
     )
-   
+
+
 class ResultRequest(BaseModel):
     table: List[str] = Field(description="Данные csv таблицы")
     summary: List[str] = Field(description="Вывод")
@@ -138,13 +139,14 @@ def validate_result(query_entities: List[str], bd_entities: List[int]) -> bool:
     print(len(query_entities), len(bd_entities))
     return len(query_entities) == len(bd_entities)
 
+
 def get_criterion_data_for_all(
-    bank_product_embeddings: List[Tuple[int, int, List[float]]]
+    bank_product_embeddings: List[Tuple[int, int, List[float]]],
 ) -> List[Tuple[Any, ...]]:
     """
     Получает наиболее релевантную запись из bank_analysis
     для каждой тройки (bank_id, product_id, embedding).
-    
+
     Args:
         bank_product_embeddings: список вида [(bank_id, product_id, embedding), ...]
     """
@@ -166,7 +168,7 @@ def get_criterion_data_for_all(
             for bank_id, product_id, emb in bank_product_embeddings:
                 emb_str = "[" + ",".join(str(x) for x in emb) + "]"
                 values_parts.append(f"({bank_id}, {product_id}, '{emb_str}'::vector)")
-            
+
             values_clause = ", ".join(values_parts)
 
             # query = f"""
@@ -239,8 +241,7 @@ def get_criterion_data_for_all(
             # LEFT JOIN public.products p ON p.id = input.product_id
             # ORDER BY input.bank_id, input.product_id;
             # """
-            
-            
+
             # query = f"""
             #    SELECT
             #     b.bank AS bank_name,
@@ -309,39 +310,42 @@ def get_user_request_data_from_db(
             print(criteria)
             print(get_criterion_data_for_all(bank_product_embeddings))
             results.append(get_criterion_data_for_all(bank_product_embeddings))
-        print("#"*50)
-        import pandas as pd    
+        print("#" * 50)
+        import pandas as pd
+
         print(results)
         all_rows = []
         for criterion_group in results:
             for row in criterion_group:
                 bank, produc, metric, value, url, data = row
                 print(data)
-                all_rows.append({
-                    'Банк': bank,
-                    'Тип продукта': produc,
-                    'Показатель': metric,
-                    'Значение': value
-                })
+                all_rows.append(
+                    {
+                        "Банк": bank,
+                        "Тип продукта": produc,
+                        "Показатель": metric,
+                        "Значение": value,
+                    }
+                )
 
         # Создаём DataFrame
         df = pd.DataFrame(all_rows)
-        df['Критерий'] = df['Тип продукта'] + ': ' + df['Показатель']
+        df["Критерий"] = df["Тип продукта"] + ": " + df["Показатель"]
 
         # Используем pivot_table с aggfunc — например, первое значение
         pivot = df.pivot_table(
-            index='Банк',
-            columns='Критерий',
-            values='Значение',
-            aggfunc='first',         
-            fill_value=''            
+            index="Банк",
+            columns="Критерий",
+            values="Значение",
+            aggfunc="first",
+            fill_value="",
         ).reset_index()
         print(df)
         pivot.columns.name = None
 
-        pivot.to_csv(r'app\resourses\report.csv', index=False, encoding='utf-8')
-        
+        pivot.to_csv(r"app\resourses\report.csv", index=False, encoding="utf-8")
+
         return results
-    
+
     except Exception as e:
         print(f"❌ Ошибка: {e}")
