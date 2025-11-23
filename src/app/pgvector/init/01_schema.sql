@@ -55,6 +55,7 @@ CREATE TABLE bank_analysis (
     criterion      TEXT    NOT NULL,               -- текст критерия
     criterion_embed VECTOR  NOT NULL,                       -- эмбеддинг критерия
     source         TEXT    NOT NULL,               -- источник
+    data           TEXT NOT NULL,
     ts             TIMESTAMPTZ NOT NULL            -- время (UTC, без мс)
 );
 
