@@ -2,52 +2,87 @@ import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from collections import defaultdict
+from datetime import timezone
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import re
+from collections import defaultdict
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+data = [[('Сбер', 'накопительные счета', 'процентная ставка', '15 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 22, 19, 35, 29, 956606, tzinfo=datetime.timezone.utc)), ('ОТП Банк', 'накопительные счета', 'процентная ставка', '18 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 22, 21, 14, 0, 318237, tzinfo=datetime.timezone.utc))], [('Сбер', 'накопительные счета', 'процентная ставка', '9 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 23, 0, 27, 23, 313438, tzinfo=datetime.timezone.utc)), ('ОТП Банк', 'накопительные счета', 'процентная ставка', '8 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 23, 0, 27, 14, 605646, tzinfo=datetime.timezone.utc))]]
+data = [[('Сбер', 'накопительные счета', 'процентная ставка', '15 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 22, 19, 35, 29, 956606, tzinfo=datetime.timezone.utc)), ('Сбер', 'накопительные счета', 'кэшбек', '9 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 23, 0, 27, 23, 313438, tzinfo=datetime.timezone.utc)), ('Сбер', 'накопительные счета', 'кэшбек', '19 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 23, 1, 18, 12, 16337, tzinfo=datetime.timezone.utc)), ('ОТП Банк', 'накопительные счета', 'процентная ставка', '18 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 22, 21, 14, 0, 318237, tzinfo=datetime.timezone.utc)), ('ОТП Банк', 'накопительные счета', 'кэшбек', '8 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 23, 0, 27, 14, 605646, tzinfo=datetime.timezone.utc))], [('Сбер', 'накопительные счета', 'кэшбек', '9 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 23, 0, 27, 23, 313438, tzinfo=datetime.timezone.utc)), ('Сбер', 'накопительные счета', 'кэшбек', '19 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 23, 1, 18, 12, 16337, tzinfo=datetime.timezone.utc)), ('Сбер', 'накопительные счета', 'процентная ставка', '15 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 22, 19, 35, 29, 956606, tzinfo=datetime.timezone.utc)), ('ОТП Банк', 'накопительные счета', 'кэшбек', '8 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 23, 0, 27, 14, 605646, tzinfo=datetime.timezone.utc)), ('ОТП Банк', 'накопительные счета', 'процентная ставка', '18 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 22, 21, 14, 0, 318237, tzinfo=datetime.timezone.utc))]]
+data = [[('Альфа-Банк', 'накопительные счета', 'ограничения на пополнение накопительного счета', 'нет ограничений', 'https://alfabank.ru/make-money/savings-account/', datetime.datetime(2025, 11, 23, 1, 13, 6, 982580, tzinfo=datetime.timezone.utc)), ('Альфа-Банк', 'накопительные счета', 'минимальная сумма для открытия накопительного счета', '1 рубль', 'https://alfabank.ru/make-money/savings-account/', datetime.datetime(2025, 11, 23, 1, 13, 6, 982580, tzinfo=datetime.timezone.utc)), ('Альфа-Банк', 'накопительные счета', 'минимальная сумма для открытия накопительного счета', '1 рубль', 'https://alfabank.ru/make-money/', datetime.datetime(2025, 11, 23, 1, 8, 31, 391326, tzinfo=datetime.timezone.utc)), ('Альфа-Банк', 'накопительные счета', 'наличие комиссии за обслуживание накопительного счета', 'бесплатно', 'https://alfabank.ru/make-money/savings-account/', datetime.datetime(2025, 11, 23, 1, 13, 6, 982580, tzinfo=datetime.timezone.utc)), ('Альфа-Банк', 'накопительные счета', 'частота начисления процентов по накопительному счету', 'ежедневно', 'https://alfabank.ru/make-money/savings-account/', datetime.datetime(2025, 11, 23, 1, 13, 6, 982580, tzinfo=datetime.timezone.utc))], [ ('Альфа-Банк', 'накопительные счета', 'максимальная процентная ставка по накопительному счету', '17% годовых', 'https://alfabank.ru/make-money/savings-account/', datetime.datetime(2025, 11, 23, 1, 13, 6, 982580, tzinfo=datetime.timezone.utc)), ('Альфа-Банк', 'накопительные счета', 'максимальная процентная ставка по накопительному счёту', '17% годовых', 'https://alfabank.ru/help/articles/deposits/chto-takoe-nakopitelnyj-schet/', datetime.datetime(2025, 11, 23, 1, 13, 6, 982580, tzinfo=datetime.timezone.utc)), ('Альфа-Банк', 'накопительные счета', 'максимальная процентная ставка по накопительному счёту', '17% годовых', 'https://alfabank.ru/make-money/savings-account/', datetime.datetime(2025, 11, 23, 1, 8, 31, 391326, tzinfo=datetime.timezone.utc)), ('Альфа-Банк', 'накопительные счета', 'максимальная процентная ставка по накопительному счету по ежедневному остатку', '17% годовых', 'https://alfabank.ru/make-money/', datetime.datetime(2025, 11, 23, 1, 8, 31, 391326, tzinfo=datetime.timezone.utc)), ('Альфа-Банк', 'накопительные счета', 'минимальная сумма для открытия накопительного счета', '1 рубль', 'https://alfabank.ru/make-money/', datetime.datetime(2025, 11, 23, 1, 8, 31, 391326, tzinfo=datetime.timezone.utc))]]
+# === 1. Объединяем все записи из всех подсписков ===
+all_records = [record for sublist in data for record in sublist]
+if not all_records:
+    raise ValueError("Нет данных для отображения")
 
-# Ваши данные
-data = [
-    [
-        ('15', datetime.datetime(2025, 11, 22, 19, 35, 29, 956606, tzinfo=datetime.timezone.utc)),
-        ('18',  datetime.datetime(2025, 11, 22, 21, 14, 0, 318237, tzinfo=datetime.timezone.utc))
-    ]
-]
-data = [[('Сбер', 'накопительные счета', 'процентная ставка', '15 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 22, 19, 35, 29, 956606, tzinfo=datetime.timezone.utc)), ('ОТП Банк', 'накопительные счета', 'процентная ставка', '18 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 22, 21, 14, 0, 318237, tzinfo=datetime.timezone.utc))], [('Сбер', 'накопительные счета', 'кэшбек', '9 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 23, 0, 27, 23, 313438, tzinfo=datetime.timezone.utc)), ('ОТП Банк', 'накопительные счета', 'кэшбек', '8 процентов', 'https://www.banki.ru', datetime.datetime(2025, 11, 23, 0, 27, 14, 605646, tzinfo=datetime.timezone.utc))]]
-all_records = [item for sublist in data for item in sublist]
+# Берём метаданные из первой записи (предполагается, что все записи однородны)
+_, product_type, metric_name = all_records[0][0], all_records[0][1], all_records[0][2]
+common_ylabel = metric_name  # например: "процентная ставка"
+common_title = f"{product_type}: {metric_name}"
 
-# Шаг 2: Группировка по банку
-bank_groups = defaultdict(list)
+# === 2. Группировка по банку ===
+grouped = defaultdict(list)
 for record in all_records:
     bank = record[0]
-    bank_groups[bank].append(record)
+    grouped[bank].append(record)
 
-# Шаг 3: Обработать каждую группу
-result = {}
+# === 3. Подготовка временных рядов ===
+bank_series = {}
 
-for bank, records in bank_groups.items():
-    # Возьмём первые три поля из первой записи для формирования заголовка
-    # (предполагаем, что они одинаковы для всех записей по банку — или хотя бы тип и показатель совпадают)
-    _, account_type, metric = records[0][1], records[0][2], records[0][3]
-    # Формируем заголовок: "Сбер накопительные счета : процентная ставка"
-    title = f"{bank} {account_type} : {metric}"
+def extract_number(value_str):
+    """Извлекает первое число с плавающей точкой из строки. Возвращает float или None."""
+    match = re.search(r'[-+]?\d*\.?\d+', value_str)
+    return float(match.group()) if match else None
 
-final_groups = {}
-
-for (bank, acc_type, metric), items in grouped.items():
-    cleaned_items = []
-    for value_str, dt in items:
+for bank, records in grouped.items():
+    series = []
+    for rec in records:
+        value_str = rec[3]
         num = extract_number(value_str)
-        if num is not None:
-            # Убираем tzinfo для matplotlib (опционально)
-            if dt.tzinfo is not None:
-                dt = dt.replace(tzinfo=None)
-            cleaned_items.append((num, dt))
-    title = f"{bank} {acc_type} : {metric}"
-    final_groups[title] = cleaned_items
+        if num is not None:  # пропускаем записи без чисел
+            series.append((rec[5], num))  # (дата, значение)
+    if series:  # сохраняем банк только если есть хотя бы одна валидная запись
+        series.sort(key=lambda x: x[0])  # сортировка по времени
+        bank_series[bank] = series
 
-# Теперь final_groups содержит всё, что нужно
-for title, data_points in final_groups.items():
-    print(f"\n=== {title} ===")
-    for val, dt in data_points:
-        print(f"  {val} → {dt}")
+# Проверка, что после фильтрации остались данные
+if not bank_series:
+    raise ValueError("Нет данных с числовыми значениями для построения графика")
+
+# === 4. Построение графика ===
+plt.figure(figsize=(12, 6))
+
+for bank, series in bank_series.items():
+    dates, values = zip(*series)
+    plt.plot(dates, values, marker='o', linewidth=2, markersize=6, label=bank)
+
+# Динамическое оформление — без хардкода!
+plt.title(common_title, fontsize=14)
+plt.xlabel("Дата", fontsize=12)          # ← единственные "хардкодные" слова
+plt.ylabel(common_ylabel, fontsize=12)   # ← всё остальное — из данных
+plt.grid(True, linestyle='--', alpha=0.6)
+plt.legend(title="Банки")
+
+# Форматирование оси X
+plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%m-%d %H:%M'))
+plt.gca().xaxis.set_major_locator(mdates.HourLocator(interval=6))
+plt.gcf().autofmt_xdate()
+
+# Сохранение
+output_filename = f"{product_type.replace(' ', '_')}_{metric_name.replace(' ', '_')}.png"
+plt.tight_layout()
+plt.savefig(r"app\resourses\plot.png", dpi=150)
+plt.close()
+
+
+print(f"✅ График сохранён как '{output_filename}'")
+
+
+
+
 
 # # Извлекаем (значение, дата)
 # rows = []
