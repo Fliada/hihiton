@@ -12,6 +12,7 @@ import psycopg2
 from dotenv import load_dotenv
 from psycopg2.extras import execute_values
 from pydantic import ValidationError
+from langchain_core.tools import tool
 
 from src.app.domain.models import CriterionWithEmbedding, WebSearchItem, WebSearchResult
 
@@ -91,11 +92,11 @@ def get_bank_and_products() -> List[Dict[str, Dict[str, int]]]:
     return prepare_query(banks, products)
 
 
-def save_raw_data(result: WebSearchResult) -> bool:
+def save_raw_data(result: WebSearchResult) -> List[int]:
     """Сохраняет валидированные результаты поиска в таблицу bank_buffer"""
     conn = get_connection()
     ts = datetime.utcnow()
-    success = False
+    inserted_ids: List[int] = []
 
     try:
         with conn.cursor() as cursor:
@@ -111,6 +112,7 @@ def save_raw_data(result: WebSearchResult) -> bool:
                         """
                         INSERT INTO bank_buffer (bank_id, product_id, raw_data, source, ts)
                         VALUES (%s, %s, %s, %s, %s)
+                        RETURNING id
                         """,
                         (
                             result.bank_id,
@@ -120,6 +122,8 @@ def save_raw_data(result: WebSearchResult) -> bool:
                             ts,
                         ),
                     )
+                    row_id = cursor.fetchone()[0]
+                    inserted_ids.append(row_id)
                 except ValidationError as ve:
                     print(f"Validation error for item: {ve}")
                     continue
@@ -128,16 +132,62 @@ def save_raw_data(result: WebSearchResult) -> bool:
                     continue
 
         conn.commit()
-        success = True
-        print(
-            f"Successfully saved {len(result.items)} items for bank_id={result.bank_id}, product_id={result.product_id}"
-        )
+        if inserted_ids:
+            print(
+                f"Successfully saved {len(inserted_ids)} items for bank_id={result.bank_id}, product_id={result.product_id}"
+            )
 
     except Exception as e:
         conn.rollback()
         print(f"Database error: {str(e)}")
     finally:
-        return success
+        return inserted_ids
+
+
+@tool(parse_docstring=True)
+def save_raw_web_data(bank_id: int, product_id: int, source: str, content: str) -> str:
+    """
+    Сохраняет один источник (source/content) в таблицу bank_buffer и возвращает ID записей.
+
+    Args:
+        bank_id: ID банка.
+        product_id: ID продукта.
+        source: Ссылка на источник (URL).
+        content: Текстовое содержимое страницы.
+
+    Returns:
+        JSON-строка с полями status, record_ids и message. Используй record_ids, чтобы сразу вызвать
+        process_raw_data_for_criteria только для добавленных записей.
+    """
+    try:
+        payload = WebSearchResult(
+            bank_id=bank_id,
+            product_id=product_id,
+            items=[WebSearchItem(source=source, content=content)],
+        )
+        record_ids = save_raw_data(payload)
+
+        if not record_ids:
+            raise ValueError("Запись не была сохранена. Проверь источник и содержимое.")
+
+        return json.dumps(
+            {
+                "status": "success",
+                "record_ids": record_ids,
+                "message": "Сырые данные сохранены. Передайте record_ids в process_raw_data_for_criteria.",
+            },
+            ensure_ascii=False,
+        )
+    except ValidationError as ve:
+        return json.dumps(
+            {"status": "error", "message": f"Validation error: {ve}"},
+            ensure_ascii=False,
+        )
+    except Exception as e:
+        return json.dumps(
+            {"status": "error", "message": f"Failed to save raw data: {e}"},
+            ensure_ascii=False,
+        )
 
 
 def get_embedding(text: str) -> List[float]:

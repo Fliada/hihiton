@@ -16,6 +16,7 @@ def process_raw_data_for_criteria(
     product_id: Optional[int] = None,
     criteria_list: Optional[List[str]] = None,
     force_today: bool = True,
+    record_ids: Optional[List[int]] = None,
 ) -> str:
     """
     Обрабатывает сырые данные из bank_buffer и извлекает указанные критерии.
@@ -30,7 +31,9 @@ def process_raw_data_for_criteria(
         bank_id: ID банка для фильтрации (необязательно)
         product_id: ID продукта для фильтрации (необязательно)
         criteria_list: Список конкретных критериев для извлечения (необязательно)
-        force_today: Обрабатывать только сегодняшние данные (по умолчанию True)
+        force_today: Обрабатывать только сегодняшние данные (по умолчанию True).
+            Если переданы record_ids, фильтр по дате можно не использовать.
+        record_ids: Список конкретных ID записей из bank_buffer, которые нужно обработать.
 
     Returns:
         str: Статус обработки с количеством обработанных записей
@@ -39,7 +42,9 @@ def process_raw_data_for_criteria(
         processor = DataProcessor()
 
         # Фильтрация данных
-        today_date = datetime.now(timezone.utc).date() if force_today else None
+        today_date = (
+            datetime.now(timezone.utc).date() if force_today and not record_ids else None
+        )
 
         conn = get_connection()
         processed_records = 0
@@ -72,13 +77,20 @@ def process_raw_data_for_criteria(
                 query += " AND product_id = %s"
                 params.append(product_id)
 
+            if record_ids:
+                query += " AND id = ANY(%s)"
+                params.append(record_ids)
+
             query += " ORDER BY bank_id, product_id, id"
 
             cursor.execute(query, params)
             records = cursor.fetchall()
 
             if not records:
-                return f"Не найдено сырых данных для обработки. Параметры: bank_id={bank_id}, product_id={product_id}, today_only={force_today}"
+                return (
+                    "Не найдено сырых данных для обработки. "
+                    f"Параметры: bank_id={bank_id}, product_id={product_id}, today_only={force_today}, record_ids={record_ids}"
+                )
 
             logger.info(f"Найдено {len(records)} записей для обработки")
 
@@ -109,8 +121,11 @@ def process_raw_data_for_criteria(
                         )
 
         result = f"Успешно обработано {processed_records} записей с {total_criteria} критериями"
-        if bank_id or product_id or criteria_list:
-            result += f"\nФильтры: bank_id={bank_id}, product_id={product_id}, criteria={criteria_list}"
+        if bank_id or product_id or criteria_list or record_ids:
+            result += (
+                f"\nФильтры: bank_id={bank_id}, product_id={product_id}, "
+                f"criteria={criteria_list}, record_ids={record_ids}"
+            )
 
         return result
 

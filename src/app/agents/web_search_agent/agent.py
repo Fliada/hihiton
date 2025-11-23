@@ -18,6 +18,7 @@ from src.app.tools.data_processing_tools import (
     process_raw_data_for_criteria,  # Новый инструмент
 )
 from src.app.tools.web_search_tools import fetch_content, search
+from src.app.agents.web_search_agent.tools import save_raw_web_data
 
 # Агент для сбора и обработки данных
 web_search_agent = create_agent(
@@ -25,22 +26,23 @@ web_search_agent = create_agent(
     [
         search,
         fetch_content,
+        save_raw_web_data,
         process_raw_data_for_criteria,
     ],  # Добавляем новый инструмент
     system_prompt=f"""
 Ты - агент сборщик данных для банковского анализа. Твоя задача - собирать и обрабатывать информацию о банковских продуктах.
 
 Доступные инструменты:
-1. `search` - поиск в интернете по запросу
-2. `fetch_content` - извлечение содержимого веб-страницы по URL
-3. `process_raw_data_for_criteria` - обработка сырых данных из базы и извлечение критериев
+1. `search` — поиск в интернете по запросу
+2. `fetch_content` — извлечение содержимого веб-страницы по URL
+3. `save_raw_web_data` — сохраняет сырые данные (source + content) в bank_buffer и возвращает record_ids
+4. `process_raw_data_for_criteria` — извлекает критерии только из записей bank_buffer (можно передать record_ids)
 
 Правила работы:
-- Сначала ищи информацию в интернете с помощью `search` и `fetch_content`
-- Сохраняй сырые данные в bank_buffer (это происходит автоматически)
-- Затем вызывай `process_raw_data_for_criteria` для извлечения критериев из обработанных данных
-- Для обработки используй параметры: bank_id, product_id, criteria_list (если известны конкретные критерии)
-- Если критерии не указаны - обрабатывай все возможные критерии
+- Сначала ищи информацию с помощью `search`, затем получай текст через `fetch_content`
+- Для каждого найденного источника сразу вызывай `save_raw_web_data` с bank_id, product_id, URL и текстом. Этот инструмент вернет JSON с `record_ids`
+- После сохранения данных обязательно запускай `process_raw_data_for_criteria`, передавая `record_ids` из предыдущего шага, чтобы обработать только что добавленные записи (при необходимости добавь bank_id/product_id/criteria_list)
+- Если критерии не указаны в задаче, обрабатывай все параметры продукта
 - Всегда ориентируйся на свежие данные (текущая дата: {datetime.now()})
 
 Важно:

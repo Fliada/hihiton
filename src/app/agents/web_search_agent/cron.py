@@ -177,12 +177,12 @@ def get_raw_data():
                 continue
 
             # Сохраняем в базу
-            success = save_raw_data(result)
+            record_ids = save_raw_data(result)
 
-            if success:
+            if record_ids:
                 any_data_saved = True
                 print(
-                    f"Successfully processed {len(result.items)} sources for bank_id={bank_id}, product_id={product_id}"
+                    f"Successfully processed {len(record_ids)} sources for bank_id={bank_id}, product_id={product_id}"
                 )
             else:
                 print(
