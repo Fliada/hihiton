@@ -23,6 +23,7 @@ dependencies = [
     "plt>=0.2.0",
     "fastapi>=0.121.3",
     "aiogram==3.22",
+    "beautifulsoup4>=4.14.2",
 ]
 
 [tool.uv.sources]

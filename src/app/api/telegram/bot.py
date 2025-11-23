@@ -58,7 +58,7 @@ async def handle_user_message(message: types.Message):
 
     await message.answer("Обрабатываю ваше сообщение...")
 
-    result = run_agent(user_text)
+    result = run_agent(user_text, "")
     result = result["messages"][-1].content
     
     try:

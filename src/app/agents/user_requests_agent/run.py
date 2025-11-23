@@ -9,7 +9,7 @@ from loguru import logger
 langfuse_handler = CallbackHandler()
 
 
-def run_agent(user_query: str, thread_id: str = 1) -> dict:
+def run_agent(user_query: str, thread_id: str) -> dict:
     """Запускает супервизора с пользовательским запросом"""
     config = {"configurable": {"thread_id": thread_id}, "callbacks": [langfuse_handler]}
     try:
