@@ -3,43 +3,16 @@
 
 # from langchain_mcp_adapters.client import MultiServerMCPClient
 
-from src.app.tools.web_search_tools import search, fetch_content
-from langchain.agents import create_agent
+from datetime import datetime
 
+from langchain.agents import create_agent
 from loguru import logger
 
 from src.app.infra.llm.client import llm
-
-# client = MultiServerMCPClient(
-#     {
-#         "ddg-search": {
-#             "command": "uvx",
-#             "args": ["duckduckgo-mcp-server"],
-#             "transport": "stdio",
-#         },
-#     }
-# )
-
-
-# async def fetch_tools():
-#     return await client.get_tools(server_name="ddg-search")
-
-
-# def run_in_thread():
-#     try:
-#         tools = asyncio.run(fetch_tools())
-#         logger.info(f"Инструменты: {[tool.name for tool in tools]}")
-#         return tools
-#     except Exception as e:
-#         print("Ошибка:", e)
-#         raise
-
-
-# with concurrent.futures.ThreadPoolExecutor() as executor:
-#     future = executor.submit(run_in_thread)
-#     tools = future.result()
-
+from src.app.tools.web_search_tools import fetch_content, search
 
 web_search_agent = create_agent(
-    llm, [search, fetch_content], system_prompt="Ты агент для поиска в интернете"
+    llm,
+    [search, fetch_content],
+    system_prompt=f"Ты агент для поиска в интернете. Ты должен извлекать информацию и ориентироваться на свежие данные на момент запроса. Текущая дата {datetime.now()}",
 )
